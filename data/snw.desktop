@@ -1,0 +1,6 @@
+[Xfce Panel]
+Type=X-XFCE-PanelPlugin
+Encoding=UTF-8
+Name=SNW Plugin
+Comment=SNW Plugin
+X-XFCE-Module=snw
