@@ -5,6 +5,7 @@ public class StatusNotifierWidget : Gtk.Box {
     public StatusNotifierWidget(SNWPlugin plugin) {
         this.plugin = plugin;
         plugin.size_changed.connect(change_size);
+        plugin.orientation_changed.connect(change_orientation);
         this.watcher = new StatusNotifierWatcher();
         watcher.connector.item_added.connect(add_button);
         watcher.connector.item_removed.connect(remove_button);
@@ -44,6 +45,10 @@ public class StatusNotifierWidget : Gtk.Box {
             buttons.index(i).change_size(size);
         }
         return true;
+    }
+    
+    void change_orientation(Gtk.Orientation new_orientation) {
+		orientation = new_orientation;
     }
     
     private SNWPlugin plugin;
