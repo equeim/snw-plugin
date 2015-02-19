@@ -11,7 +11,6 @@ public class StatusNotifierWidget : Gtk.Box {
         watcher.connector.item_removed.connect(remove_button);
 
         buttons = new Array<StatusNotifierButton>();
-        items = new Array<StatusNotifierItem>();
         
         Gtk.rc_parse_string("""
                         style "showdesktop-button-style"
@@ -29,7 +28,6 @@ public class StatusNotifierWidget : Gtk.Box {
     public void add_button(string service, string object_path) {
         StatusNotifierButton button = new StatusNotifierButton(service, object_path, plugin);
         buttons.append_val(button);
-
         pack_start(button);
         button.show_all();
     }
@@ -37,7 +35,6 @@ public class StatusNotifierWidget : Gtk.Box {
     void remove_button(int index) {
         remove(buttons.index(index));
         buttons.remove_index(index);
-        items.remove_index(index);
     }
     
     bool change_size(int size) {
@@ -48,13 +45,10 @@ public class StatusNotifierWidget : Gtk.Box {
     }
     
     void change_orientation(Gtk.Orientation new_orientation) {
-		orientation = new_orientation;
+        orientation = new_orientation;
     }
     
     private SNWPlugin plugin;
     private Array<StatusNotifierButton> buttons;
-    private Array<StatusNotifierItem> items;
     private StatusNotifierWatcher watcher;
-    
-    //public int buttons_count { get { return buttons.length } }
 }

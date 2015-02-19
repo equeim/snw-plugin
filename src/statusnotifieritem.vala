@@ -21,9 +21,12 @@ interface StatusNotifierItem : Object {
     public abstract string status { owned get; }
     public abstract int window_id { owned get; }
     public abstract string icon_name { owned get; }
+    public abstract IconPixmap[] icon_pixmap { owned get; }
     public abstract string icon_theme_path { owned get; }
     public abstract string overlay_icon_name { owned get; }
+    public abstract IconPixmap[] overlay_icon_pixmap { owned get; }
     public abstract string attention_icon_name { owned get; }
+    public abstract IconPixmap[] attention_icon_pixmap { owned get; }
     public abstract ToolTip tool_tip { owned get; }
     public abstract GLib.ObjectPath menu { owned get; }
     

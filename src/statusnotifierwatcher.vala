@@ -33,7 +33,7 @@ public class StatusNotifierWatcher : Object {
     // DBus Methods
     //
     public void register_status_notifier_item(string service, GLib.BusName sender) {
-        string object_path = "org.kde.StatusNotifierItem";
+        string object_path = "/StatusNotifierItem";
         if (service.contains("/")) {
             object_path = service;
             service = sender;
