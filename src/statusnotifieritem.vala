@@ -40,5 +40,5 @@ interface StatusNotifierItem : Object {
     public signal void new_attention_icon();
     public signal void new_overlay_icon();
     public signal void new_tool_tip();
-    public signal void new_status();
+    public signal void new_status(string status);
 }
