@@ -5,13 +5,13 @@ using GLib;
 //
 [DBus (name = "org.kde.StatusNotifierWatcher")]
 public class StatusNotifierWatcher : Object {
-    
+
     public StatusNotifierWatcher() {
         connector = new Connector();
-        
+
         _registered_status_notifier_items = new Array<string>();
         watcher_ids = new Array<uint>();
-        
+
         Bus.own_name (BusType.SESSION,
                     "org.kde.StatusNotifierWatcher",
                     BusNameOwnerFlags.NONE,
@@ -19,7 +19,7 @@ public class StatusNotifierWatcher : Object {
                     () => {},
                     () => stderr.printf ("Could not aquire name\n"));
     }
-    
+
     //
     // DBus Properties
     //
@@ -38,9 +38,21 @@ public class StatusNotifierWatcher : Object {
             object_path = service;
             service = sender;
         }
-        
+
+        int index = -1;
+        for (int i = 0; i < registered_status_notifier_items.length; i++) {
+            if (service == registered_status_notifier_items[i]) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index != -1) {
+            return;
+        }
+
         _registered_status_notifier_items.append_val(service);
-        
+
         watcher_ids.append_val(Bus.watch_name(BusType.SESSION,
                                     service,
                                     BusNameWatcherFlags.NONE,
@@ -50,18 +62,18 @@ public class StatusNotifierWatcher : Object {
         status_notifier_item_registered(service);
         connector.item_added(service, object_path);
     }
-    
+
     public void register_status_notifier_host(string service) {
-        
+
     }
-    
+
     //
     // DBus Signals
     //
     public signal void status_notifier_host_registered();
     public signal void status_notifier_item_registered(string service);
     public signal void status_notifier_item_unregistered(string service);
-    
+
     //
     // Private Methods
     //
@@ -72,7 +84,7 @@ public class StatusNotifierWatcher : Object {
             stderr.printf ("Could not register service\n");
         }
     }
-    
+
     private void remove_item(DBusConnection connection, string service) {
         int index = -1;
         for (int i = 0; i < registered_status_notifier_items.length; i++) {
@@ -81,17 +93,17 @@ public class StatusNotifierWatcher : Object {
                 break;
             }
         }
-        
+
         Bus.unwatch_name(watcher_ids.index(index));
-        
+
         _registered_status_notifier_items.remove_index(index);
         watcher_ids.remove_index(index);
-        
+
         connector.item_removed(index);
-        
+
         status_notifier_item_unregistered(service);
     }
-    
+
     private Array<uint> watcher_ids;
     public Connector connector;
 }

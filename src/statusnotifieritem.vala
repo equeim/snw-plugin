@@ -29,12 +29,12 @@ interface StatusNotifierItem : Object {
     public abstract IconPixmap[] attention_icon_pixmap { owned get; }
     public abstract ToolTip tool_tip { owned get; }
     public abstract GLib.ObjectPath menu { owned get; }
-    
+
     public abstract void context_menu(int x, int y) throws IOError;
     public abstract void activate(int x, int y) throws IOError;
     public abstract void secondary_activate(int x, int y) throws IOError;
     public abstract void scroll(int delta, string orientation) throws IOError;
-    
+
     public signal void new_title();
     public signal void new_icon();
     public signal void new_attention_icon();

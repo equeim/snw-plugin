@@ -29,7 +29,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                 tooltip_text = item.tool_tip.title;
             }
         }
-        
+
         icon_theme = Gtk.IconTheme.get_default();
 
         //
@@ -94,8 +94,8 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         StatusNotifierItem item = Bus.get_proxy_sync(BusType.SESSION,
                                                     service,
                                                     object_path);
-            
-        tooltip_text = item.title;                                             
+
+        tooltip_text = item.title;
         if (item.tool_tip.title != null) {
             if (item.tool_tip.title.length != 0) {
                 tooltip_text = item.tool_tip.title;
@@ -121,21 +121,21 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                 8,
                                                 icon_size,
                                                 icon_size);
-                                                
+
         try {
             icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
         } catch (Error e) {
             stdout.printf("Error: %s\n", e.message);
         }
-                                                            
+
         string icon_name = item.attention_icon_name.length == 0 ?
                             item.icon_name :
                             item.attention_icon_name;
-                            
+
         if (icon_name.length != 0) {
             if (item.icon_theme_path != null)
                 icon_theme.prepend_search_path(item.icon_theme_path);
-                    
+
             try {
                 icon_pixbuf = icon_theme.load_icon(item.icon_name, icon_size, 0);
             } catch (Error e) {
@@ -143,17 +143,17 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
 
         } else {
-            
+
             IconPixmap icon_pixmap = IconPixmap();
             bool has_icon = false;
-            
+
             if (item.icon_pixmap.length != 0) {
                 if (item.icon_pixmap[0].bytes.length != 0) {
                     icon_pixmap = item.icon_pixmap[0];
                     has_icon = true;
                 }
             }
-                
+
             if (!has_icon) {
                 if (icon != null) {
                     remove(icon);
@@ -163,18 +163,18 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                 icon.show();
                 return;
             }
-                
+
             if (item.attention_icon_pixmap.length != 0) {
                 if (item.attention_icon_pixmap[0].bytes.length != 0) {
                     icon_pixmap = item.attention_icon_pixmap[0];
                 }
             }
-                
+
             uint[] new_bytes = (uint[]) icon_pixmap.bytes;
             for (int i = 0; i < new_bytes.length; i++) {
                 new_bytes[i] = new_bytes[i].to_big_endian();
             }
-                
+
             icon_pixmap.bytes = (uint8[]) new_bytes;
             for (int i = 0; i < icon_pixmap.bytes.length; i = i+4) {
                 uint8 red = icon_pixmap.bytes[i];
@@ -198,7 +198,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         if (icon != null) {
             remove(icon);
         }
-                
+
         icon = new Gtk.Image.from_pixbuf(icon_pixbuf);
         add(icon);
         icon.show();
