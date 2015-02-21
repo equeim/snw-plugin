@@ -19,10 +19,11 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         menu = new DbusmenuGtk.Menu(service, item.menu);
         menu.deactivate.connect(hide_menu);
 
-        if (item.tool_tip.title.length != 0) {
-            tooltip_text = item.tool_tip.title;
-        } else {
-            tooltip_text = item.title;
+        tooltip_text = item.title;
+        if (item.tool_tip.title != null) {
+            if (item.tool_tip.title.length != 0) {
+                tooltip_text = item.tool_tip.title;
+            }
         }
         
         icon_theme = Gtk.IconTheme.get_default();
