@@ -13,7 +13,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                 service,
                                 object_path);
 
-        int size = plugin.get_size();
+        int size = plugin.size;
         set_size_request(size, size);
 
         menu = new DbusmenuGtk.Menu(service, item.menu);
@@ -26,7 +26,6 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
         
         icon_theme = Gtk.IconTheme.get_default();
-        update_icon();
 
         //
         // Signal connections
@@ -99,25 +98,19 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
     }
 
-    void update_icon() {
+    public void update_icon() {
         StatusNotifierItem item = Bus.get_proxy_sync(BusType.SESSION,
                                                     service,
                                                     object_path);
-                                                     
-        int icon_size = plugin.get_size();
-        if (icon_size < 22)
-            icon_size = 16;
-        else if (icon_size < 32)
-            icon_size = 22;
-        else if (icon_size < 48)
-            icon_size = 32;
-        else if (icon_size < 64)
-            icon_size = 48;
-        else if (icon_size < 96)
-            icon_size = 64;
-        else
-            icon_size = 96;
-        
+
+        int thickness;
+        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+            thickness = 2 * this.style.ythickness;
+        } else {
+            thickness = 2 * this.style.xthickness;
+        }
+        int icon_size = plugin.size - thickness;
+
         Gdk.Pixbuf icon_pixbuf = new Gdk.Pixbuf(Gdk.Colorspace.RGB,
                                                 true,
                                                 8,
@@ -143,7 +136,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             } catch (Error e) {
                 stdout.printf("Error: %s\n", e.message);
             }
-            
+
         } else {
             
             IconPixmap icon_pixmap = IconPixmap();
@@ -191,12 +184,12 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                     icon_pixmap.width,
                                                     icon_pixmap.height,
                                                     Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
-                                                        
-            if (icon_pixbuf.width > icon_size) {
-                icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
-            }
         }
-        
+
+        if (icon_pixbuf.width > icon_size) {
+            icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
+        }
+
         if (icon != null) {
             remove(icon);
         }

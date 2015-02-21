@@ -13,14 +13,13 @@ public class StatusNotifierWidget : Gtk.Box {
         buttons = new Array<StatusNotifierButton>();
         
         Gtk.rc_parse_string("""
-                        style "showdesktop-button-style"
+                        style "button-style"
                         {
                         GtkWidget::focus-line-width = 0
                         GtkWidget::focus-padding = 0
                         GtkButton::inner-border = {0,0,0,0}
                         }
-                        #widget "*.showdesktop-button" style "showdesktop-button-style"
-                        widget_class "*<StatusNotifierButton>" style "showdesktop-button-style"
+                        widget_class "*<StatusNotifierButton>" style "button-style"
                         """);
 
     }
@@ -30,6 +29,7 @@ public class StatusNotifierWidget : Gtk.Box {
         buttons.append_val(button);
         pack_start(button);
         button.show_all();
+        button.update_icon();
     }
     
     void remove_button(int index) {
