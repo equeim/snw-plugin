@@ -16,8 +16,12 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         int size = plugin.size;
         set_size_request(size, size);
 
-        menu = new DbusmenuGtk.Menu(service, item.menu);
-        menu.deactivate.connect(hide_menu);
+        if (item.menu != null) {
+            if (item.menu.length != 0) {
+                menu = new DbusmenuGtk.Menu(service, item.menu);
+                menu.deactivate.connect(hide_menu);
+            }
+        }
 
         tooltip_text = item.title;
         if (item.tool_tip.title != null) {
