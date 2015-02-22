@@ -122,26 +122,32 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                 icon_size,
                                                 icon_size);
 
-        try {
-            icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
-        } catch (Error e) {
-            stdout.printf("Error: %s\n", e.message);
-        }
-
         string icon_name = item.attention_icon_name.length == 0 ?
                             item.icon_name :
                             item.attention_icon_name;
 
         if (icon_name.length != 0) {
-            if (item.icon_theme_path != null)
-                icon_theme.prepend_search_path(item.icon_theme_path);
+
+            if (item.icon_theme_path != null) {
+                if (item.icon_theme_path.length != 0) {
+                    string[] paths;
+                    icon_theme.get_search_path(out paths);
+                    if (paths[0] != item.icon_theme_path) {
+                        icon_theme.prepend_search_path(item.icon_theme_path);
+                    }
+                }
+            }
 
             try {
                 icon_pixbuf = icon_theme.load_icon(item.icon_name, icon_size, 0);
             } catch (Error e) {
                 stdout.printf("Error: %s\n", e.message);
+                try {
+                } catch (Error e) {
+                    icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
+                    stdout.printf("Error: %s\n", e.message);
+                }
             }
-
         } else {
 
             IconPixmap icon_pixmap = IconPixmap();
@@ -157,6 +163,11 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             if (!has_icon) {
                 if (icon != null) {
                     remove(icon);
+                }
+                try {
+                    icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
+                } catch (Error e) {
+                    stdout.printf("Error: %s\n", e.message);
                 }
                 icon = new Gtk.Image.from_pixbuf(icon_pixbuf);
                 add(icon);
