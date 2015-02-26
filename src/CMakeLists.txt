@@ -4,6 +4,7 @@ set(VALA_SOURCES
     statusnotifieritem.vala
     statusnotifierwatcher.vala
     statusnotifierwidget.vala
+    qrichtextparser.vala
 )
 
 if(USE_GTK3)

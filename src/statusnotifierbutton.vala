@@ -54,6 +54,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         button_press_event.connect(button_pressed);
         scroll_event.connect(wheel_rotated);
+        query_tooltip.connect(tooltip_requested);
 
         item.new_tool_tip.connect(update_tooltip);
         item.new_icon.connect(update_icon);
@@ -106,6 +107,12 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         return false;
     }
 
+    bool tooltip_requested(int x, int y, bool keyboard, Gtk.Tooltip tip) {
+        tip.set_icon_from_gicon(tooltip_image, Gtk.IconSize.DIALOG);
+        tip.set_markup(tooltip_markup);
+        return true;
+    }
+
     void update_tooltip() {
         StatusNotifierItem item = Bus.get_proxy_sync(BusType.SESSION,
                                                     service,
@@ -114,7 +121,13 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         tooltip_text = item.title;
         if (item.tool_tip.title != null) {
             if (item.tool_tip.title.length != 0) {
-                tooltip_text = item.tool_tip.title;
+                var str = "<markup>" + item.tool_tip.title + "</markup>";
+                if (str.contains("&"))
+                    str = str.replace("&","&amp;");
+                QRichTextParser parser = new QRichTextParser(str);
+                parser.translate_markup();
+                tooltip_image = parser.icon;
+                tooltip_markup = parser.pango_markup;
             }
         }
     }
@@ -245,4 +258,5 @@ public class StatusNotifierButton : Gtk.ToggleButton {
     DbusmenuGtk.Menu menu;
     Gtk.Image icon;
     Gtk.IconTheme icon_theme;
+    Icon tooltip_image;
 }
