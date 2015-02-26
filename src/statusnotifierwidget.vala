@@ -12,16 +12,17 @@ public class StatusNotifierWidget : Gtk.Box {
 
         buttons = new Array<StatusNotifierButton>();
 
+#if !GTK3
         Gtk.rc_parse_string("""
-                        style "button-style"
-                        {
-                        GtkWidget::focus-line-width = 0
-                        GtkWidget::focus-padding = 0
-                        GtkButton::inner-border = {0,0,0,0}
-                        }
-                        widget_class "*<StatusNotifierButton>" style "button-style"
-                        """);
-
+                            style "button-style"
+                            {
+                                GtkWidget::focus-line-width = 0
+                                GtkWidget::focus-padding = 0
+                                GtkButton::inner-border = {0,0,0,0}
+                            }
+                            widget_class "*<StatusNotifierButton>" style "button-style"
+                            """);
+#endif
     }
 
     public void add_button(string service, string object_path) {

@@ -9,6 +9,15 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         set_relief(Gtk.ReliefStyle.NONE);
 
+#if GTK3
+        Gtk.CssProvider provider = new Gtk.CssProvider();
+        provider.load_from_data("""
+                                StatusNotifierButton {
+                                    padding: 2px 2px 2px 2px;
+                                }""", -1);
+        get_style_context().add_provider(provider, -99);
+#endif
+
         item = Bus.get_proxy_sync(BusType.SESSION,
                                 service,
                                 object_path);
@@ -19,6 +28,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         if (item.menu != null) {
             if (item.menu.length != 0) {
                 menu = new DbusmenuGtk.Menu(service, item.menu);
+                menu.attach_to_widget(this, null);
                 menu.deactivate.connect(hide_menu);
             }
         }
@@ -31,6 +41,12 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
 
         icon_theme = Gtk.IconTheme.get_default();
+
+        if (item.icon_theme_path != null) {
+            if (item.icon_theme_path.length != 0) {
+                    icon_theme.prepend_search_path(item.icon_theme_path);
+            }
+        }
 
         //
         // Signal connections
@@ -109,11 +125,22 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                     object_path);
 
         int thickness;
+
+#if GTK3
+        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+            thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).top;
+        } else {
+            thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).left;
+        }
+        thickness += 2;
+#else
         if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
             thickness = 2 * this.style.ythickness;
         } else {
             thickness = 2 * this.style.xthickness;
         }
+#endif
+
         int icon_size = plugin.size - thickness;
 
         Gdk.Pixbuf icon_pixbuf = new Gdk.Pixbuf(Gdk.Colorspace.RGB,
@@ -122,97 +149,84 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                 icon_size,
                                                 icon_size);
 
+        bool has_icon = true;
         string icon_name = item.attention_icon_name.length == 0 ?
                             item.icon_name :
                             item.attention_icon_name;
 
         if (icon_name.length != 0) {
-
-            if (item.icon_theme_path != null) {
-                if (item.icon_theme_path.length != 0) {
-                    string[] paths;
-                    icon_theme.get_search_path(out paths);
-                    if (paths[0] != item.icon_theme_path) {
-                        icon_theme.prepend_search_path(item.icon_theme_path);
-                    }
-                }
-            }
-
+            icon_theme.rescan_if_needed();
             try {
+#if GTK3
+                Gtk.IconInfo info = icon_theme.lookup_icon(item.icon_name, icon_size, 0);
+                icon_pixbuf = info.load_icon().copy();
+                info.free();
+#else
                 icon_pixbuf = icon_theme.load_icon(item.icon_name, icon_size, 0);
+#endif
             } catch (Error e) {
                 stdout.printf("Error: %s\n", e.message);
-                try {
-                } catch (Error e) {
-                    icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
-                    stdout.printf("Error: %s\n", e.message);
-                }
+                has_icon = false;
             }
         } else {
 
             IconPixmap icon_pixmap = IconPixmap();
-            bool has_icon = false;
 
-            if (item.icon_pixmap.length != 0) {
-                if (item.icon_pixmap[0].bytes.length != 0) {
-                    icon_pixmap = item.icon_pixmap[0];
-                    has_icon = true;
+            if (item.icon_pixmap.length == 0) {
+                has_icon = false;
+            } else if (item.icon_pixmap[0].bytes.length == 0) {
+                has_icon = false;
+            }
+
+            if (has_icon) {
+                if (item.attention_icon_pixmap.length != 0) {
+                    if (item.attention_icon_pixmap[0].bytes.length != 0) {
+                        icon_pixmap = item.attention_icon_pixmap[0];
+                    }
                 }
-            }
 
-            if (!has_icon) {
-                if (icon != null) {
-                    remove(icon);
+                uint[] new_bytes = (uint[]) icon_pixmap.bytes;
+                for (int i = 0; i < new_bytes.length; i++) {
+                    new_bytes[i] = new_bytes[i].to_big_endian();
                 }
-                try {
-                    icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
-                } catch (Error e) {
-                    stdout.printf("Error: %s\n", e.message);
+
+                icon_pixmap.bytes = (uint8[]) new_bytes;
+                for (int i = 0; i < icon_pixmap.bytes.length; i = i+4) {
+                    uint8 red = icon_pixmap.bytes[i];
+                    icon_pixmap.bytes[i] = icon_pixmap.bytes[i+2];
+                    icon_pixmap.bytes[i+2] = red;
                 }
-                icon = new Gtk.Image.from_pixbuf(icon_pixbuf);
-                add(icon);
-                icon.show();
-                return;
-            }
 
-            if (item.attention_icon_pixmap.length != 0) {
-                if (item.attention_icon_pixmap[0].bytes.length != 0) {
-                    icon_pixmap = item.attention_icon_pixmap[0];
-                }
+                icon_pixbuf = new Gdk.Pixbuf.from_data(icon_pixmap.bytes,
+                                                        Gdk.Colorspace.RGB,
+                                                        true,
+                                                        8,
+                                                        icon_pixmap.width,
+                                                        icon_pixmap.height,
+                                                        Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
             }
+        }
 
-            uint[] new_bytes = (uint[]) icon_pixmap.bytes;
-            for (int i = 0; i < new_bytes.length; i++) {
-                new_bytes[i] = new_bytes[i].to_big_endian();
+        if (!has_icon) {
+            try {
+                icon_pixbuf = icon_theme.load_icon("image-missing", icon_size, 0);
+            } catch (Error e) {
+                stdout.printf("Error: %s\n", e.message);
             }
-
-            icon_pixmap.bytes = (uint8[]) new_bytes;
-            for (int i = 0; i < icon_pixmap.bytes.length; i = i+4) {
-                uint8 red = icon_pixmap.bytes[i];
-                icon_pixmap.bytes[i] = icon_pixmap.bytes[i+2];
-                icon_pixmap.bytes[i+2] = red;
-            }
-
-            icon_pixbuf = new Gdk.Pixbuf.from_data(icon_pixmap.bytes,
-                                                    Gdk.Colorspace.RGB,
-                                                    true,
-                                                    8,
-                                                    icon_pixmap.width,
-                                                    icon_pixmap.height,
-                                                    Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
         }
 
         if (icon_pixbuf.width > icon_size) {
             icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
         }
 
-        if (icon != null) {
-            remove(icon);
+        if (icon == null) {
+            icon = new Gtk.Image.from_pixbuf(icon_pixbuf);
+            add(icon);
+            icon.show();
         }
-
-        icon = new Gtk.Image.from_pixbuf(icon_pixbuf);
-        add(icon);
-        icon.show();
+        else {
+            icon.set_from_pixbuf(icon_pixbuf);
+        }
     }
 
     public void change_size(int size) {

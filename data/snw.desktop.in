@@ -4,3 +4,4 @@ Encoding=UTF-8
 Name=SNW Plugin
 Comment=SNW Plugin
 X-XFCE-Module=snw
+X-XFCE-API=@XFCE_API@
