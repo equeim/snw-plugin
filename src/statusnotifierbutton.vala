@@ -58,6 +58,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         item.new_tool_tip.connect(update_tooltip);
         item.new_icon.connect(update_icon);
+        item.new_status.connect(update_status);
     }
 
     //
@@ -263,6 +264,18 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
         else {
             icon.set_from_pixbuf(icon_pixbuf);
+        }
+    }
+
+    public void update_status(string status) {
+        print(status);
+        switch (status) {
+        case "Passive":
+            hide();
+            break;
+        case "Active":
+            show();
+            break;
         }
     }
 
