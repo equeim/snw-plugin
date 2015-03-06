@@ -10,6 +10,7 @@ public class StatusNotifierWatcher : Object {
         connector = new Connector();
 
         _registered_status_notifier_items = new Array<string>();
+        object_paths = new Array<string>();
         watcher_ids = new Array<uint>();
 
         Bus.own_name (BusType.SESSION,
@@ -42,16 +43,20 @@ public class StatusNotifierWatcher : Object {
         int index = -1;
         for (int i = 0; i < registered_status_notifier_items.length; i++) {
             if (service == registered_status_notifier_items[i]) {
-                index = i;
-                break;
+                StatusNotifierItem ping_item = Bus.get_proxy_sync(BusType.SESSION,
+                                                                  service,
+                                                                  object_paths.index(i));
+                if (ping_item.title == null) {
+                    remove_item(null, service);
+                    break;
+                } else {
+                    return;
+                }
             }
         }
 
-        if (index != -1) {
-            return;
-        }
-
         _registered_status_notifier_items.append_val(service);
+        object_paths.append_val(object_path);
 
         watcher_ids.append_val(Bus.watch_name(BusType.SESSION,
                                     service,
@@ -85,7 +90,7 @@ public class StatusNotifierWatcher : Object {
         }
     }
 
-    private void remove_item(DBusConnection connection, string service) {
+    private void remove_item(DBusConnection? connection, string service) {
         int index = -1;
         for (int i = 0; i < registered_status_notifier_items.length; i++) {
             if (service == registered_status_notifier_items[i]) {
@@ -97,6 +102,7 @@ public class StatusNotifierWatcher : Object {
         Bus.unwatch_name(watcher_ids.index(index));
 
         _registered_status_notifier_items.remove_index(index);
+        object_paths.remove_index(index);
         watcher_ids.remove_index(index);
 
         connector.item_removed(index);
@@ -104,6 +110,7 @@ public class StatusNotifierWatcher : Object {
         status_notifier_item_unregistered(service);
     }
 
+    private Array<string> object_paths;
     private Array<uint> watcher_ids;
     public Connector connector;
 }
