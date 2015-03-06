@@ -163,11 +163,21 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                 icon_size);
 
         bool has_icon = true;
-        string icon_name = item.attention_icon_name.length == 0 ?
-                            item.icon_name :
-                            item.attention_icon_name;
 
-        if (icon_name.length != 0) {
+        string icon_name = item.icon_name;
+        if (item.attention_icon_name != null) {
+            if (item.attention_icon_name.length != 0) {
+                icon_name = item.attention_icon_name;
+            }
+        }
+        
+        if (icon_name == null) {
+            has_icon = false;
+        } else if (icon_name.length == 0) {
+            has_icon = false;
+        }
+
+        if (has_icon) {
             icon_theme.rescan_if_needed();
             try {
 #if GTK3
@@ -192,6 +202,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
 
             if (has_icon) {
+                icon_pixmap = item.icon_pixmap[0];
                 if (item.attention_icon_pixmap.length != 0) {
                     if (item.attention_icon_pixmap[0].bytes.length != 0) {
                         icon_pixmap = item.attention_icon_pixmap[0];
