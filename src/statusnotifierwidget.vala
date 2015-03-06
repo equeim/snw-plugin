@@ -47,6 +47,7 @@ public class StatusNotifierWidget : Gtk.Box {
 
     void change_orientation(Gtk.Orientation new_orientation) {
         orientation = new_orientation;
+        change_size(plugin.size);
     }
 
     private SNWPlugin plugin;

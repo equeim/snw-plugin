@@ -228,7 +228,20 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        if (icon_pixbuf.width > icon_size) {
+        float aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
+        if ((int) aspect_ratio != 1) {
+            int new_width = (int) (icon_size*aspect_ratio);
+            if (icon_pixbuf.height > icon_size) {
+                icon_pixbuf = icon_pixbuf.scale_simple(new_width, icon_size, Gdk.InterpType.BILINEAR);
+            }
+            if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+                if (new_width != icon_size) {
+                    set_size_request(new_width, plugin.size);
+                }
+            }
+        }
+
+        if (icon_pixbuf.height > icon_size) {
             icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
         }
 
