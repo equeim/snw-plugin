@@ -6,7 +6,8 @@ public class StatusNotifierWidget : Gtk.Box {
         this.plugin = plugin;
         plugin.size_changed.connect(change_size);
         plugin.orientation_changed.connect(change_orientation);
-        this.watcher = new StatusNotifierWatcher();
+        watcher = new StatusNotifierWatcher();
+
         watcher.connector.item_added.connect(add_button);
         watcher.connector.item_removed.connect(remove_button);
 
@@ -50,7 +51,7 @@ public class StatusNotifierWidget : Gtk.Box {
         change_size(plugin.size);
     }
 
-    private SNWPlugin plugin;
-    private Array<StatusNotifierButton> buttons;
-    private StatusNotifierWatcher watcher;
+    SNWPlugin plugin;
+    Array<StatusNotifierButton> buttons;
+    StatusNotifierWatcher watcher;
 }

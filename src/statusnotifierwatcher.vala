@@ -13,12 +13,12 @@ public class StatusNotifierWatcher : Object {
         object_paths = new Array<string>();
         watcher_ids = new Array<uint>();
 
-        Bus.own_name (BusType.SESSION,
+        Bus.own_name(BusType.SESSION,
                     "org.kde.StatusNotifierWatcher",
                     BusNameOwnerFlags.NONE,
                     on_bus_aquired,
                     () => {},
-                    () => stderr.printf ("Could not aquire name\n"));
+                    () => stderr.printf("Could not aquire name\n"));
     }
 
     //
@@ -27,7 +27,7 @@ public class StatusNotifierWatcher : Object {
     public bool is_status_notifier_host_registered { get { return true; } }
     public int protocol_version { get { return 0; } }
 
-    public Array<string> _registered_status_notifier_items;
+    Array<string> _registered_status_notifier_items;
     public string[] registered_status_notifier_items { get { return _registered_status_notifier_items.data; } }
 
     //
@@ -40,7 +40,6 @@ public class StatusNotifierWatcher : Object {
             service = sender;
         }
 
-        int index = -1;
         for (int i = 0; i < registered_status_notifier_items.length; i++) {
             if (service == registered_status_notifier_items[i]) {
                 StatusNotifierItem ping_item = Bus.get_proxy_sync(BusType.SESSION,
@@ -91,27 +90,21 @@ public class StatusNotifierWatcher : Object {
     }
 
     private void remove_item(DBusConnection? connection, string service) {
-        int index = -1;
         for (int i = 0; i < registered_status_notifier_items.length; i++) {
             if (service == registered_status_notifier_items[i]) {
-                index = i;
+                Bus.unwatch_name(watcher_ids.index(i));
+                watcher_ids.remove_index(i);
+                _registered_status_notifier_items.remove_index(i);
+                object_paths.remove_index(i);
+                status_notifier_item_unregistered(service);
+                connector.item_removed(i);
                 break;
             }
         }
-
-        Bus.unwatch_name(watcher_ids.index(index));
-
-        _registered_status_notifier_items.remove_index(index);
-        object_paths.remove_index(index);
-        watcher_ids.remove_index(index);
-
-        connector.item_removed(index);
-
-        status_notifier_item_unregistered(service);
     }
 
-    private Array<string> object_paths;
-    private Array<uint> watcher_ids;
+    Array<string> object_paths;
+    Array<uint> watcher_ids;
     public Connector connector;
 }
 

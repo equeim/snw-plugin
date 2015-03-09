@@ -1,17 +1,16 @@
 using GLib;
 
 public class SNWPlugin : Xfce.PanelPlugin {
-
     public override void @construct() {
-        widget = new StatusNotifierWidget(this);
+        StatusNotifierWidget widget = new StatusNotifierWidget(this);
         add(widget);
         add_action_widget(widget);
         widget.show_all();
 
-        destroy.connect (() => { Gtk.main_quit(); });
+        destroy.connect(() => {
+            Gtk.main_quit();
+        });
     }
-
-    StatusNotifierWidget widget;
 }
 
 [ModuleInit]

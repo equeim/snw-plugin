@@ -70,7 +70,6 @@ public class StatusNotifierButton : Gtk.ToggleButton {
     bool button_pressed(Gdk.EventButton event) {
         if (event.button == 1) {
             active = true;
-            menu.reposition();
             menu.popup(null,
                        null,
                        (menu, out x, out y, out push_in) => {
@@ -351,7 +350,6 @@ public class StatusNotifierButton : Gtk.ToggleButton {
     }
 
     public void update_status(string status) {
-        print(status);
         switch (status) {
         case "Passive":
             hide();
