@@ -116,13 +116,25 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         tooltip_text = item.title;
         if (item.tool_tip.title != null) {
             if (item.tool_tip.title.length != 0) {
-                var str = "<markup>" + item.tool_tip.title + "</markup>";
-                if (str.contains("&"))
-                    str = str.replace("&","&amp;");
-                QRichTextParser parser = new QRichTextParser(str);
-                parser.translate_markup();
-                tooltip_image = parser.icon;
-                tooltip_markup = parser.pango_markup;
+                bool is_pango_markup = true;
+                try {
+                    Pango.parse_markup(item.tool_tip.title, -1, '\0', null, null, null);
+                } catch (Error e) {
+                    is_pango_markup = false;
+                }
+
+                if (is_pango_markup) {
+                    tooltip_markup = item.tool_tip.title;
+                } else {
+                    string str = "<markup>" + item.tool_tip.title + "</markup>";
+                    if (str.contains("&")) {
+                        str = str.replace("&","&amp;");
+                    }
+                    QRichTextParser parser = new QRichTextParser(str);
+                    parser.translate_markup();
+                    tooltip_image = parser.icon;
+                    tooltip_markup = parser.pango_markup;
+                }
             }
         }
     }
