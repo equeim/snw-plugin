@@ -191,8 +191,8 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 #if GTK3
                 info.free();
 #endif
-                aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
-                if ((int) aspect_ratio != 1) {
+                aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
+                if (aspect_ratio != 1) {
                     new_width = (int) (icon_size*aspect_ratio);
                     info = icon_theme.lookup_icon(icon_name, new_width, 0);
                     icon_pixbuf = info.load_icon().copy();
@@ -239,7 +239,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                         icon_pixmap.width,
                                                         icon_pixmap.height,
                                                         Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
-                aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
+                aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
             }
         }
 
@@ -251,7 +251,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        if ((int) aspect_ratio == 1) {
+        if (aspect_ratio == 1) {
             if (icon_pixbuf.height > icon_size) {
                 icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
             }
