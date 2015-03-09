@@ -52,6 +52,8 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         item.new_tool_tip.connect(update_tooltip);
         item.new_icon.connect(update_icon);
+        item.new_attention_icon.connect(update_icon);
+        item.new_overlay_icon.connect(update_icon);
         item.new_status.connect(update_status);
     }
 
@@ -163,21 +165,14 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         int icon_size = plugin.size - thickness;
 
-        Gdk.Pixbuf icon_pixbuf = new Gdk.Pixbuf(Gdk.Colorspace.RGB,
-                                                true,
-                                                8,
-                                                icon_size,
-                                                icon_size);
+        Gdk.Pixbuf icon_pixbuf = null;
 
         bool has_icon = true;
 
+        float aspect_ratio = 0;
+        int new_width = 0;
+
         string icon_name = item.icon_name;
-        if (item.attention_icon_name != null) {
-            if (item.attention_icon_name.length != 0) {
-                icon_name = item.attention_icon_name;
-            }
-        }
-        
         if (icon_name == null) {
             has_icon = false;
         } else if (icon_name.length == 0) {
@@ -185,23 +180,33 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
 
         if (has_icon) {
+            if (item.attention_icon_name != null) {
+                if (item.attention_icon_name.length != 0) {
+                    icon_name = item.attention_icon_name;
+                }
+            }
             icon_theme.rescan_if_needed();
             try {
-#if GTK3
-                Gtk.IconInfo info = icon_theme.lookup_icon(item.icon_name, icon_size, 0);
+                Gtk.IconInfo info = icon_theme.lookup_icon(icon_name, icon_size, 0);
                 icon_pixbuf = info.load_icon().copy();
+#if GTK3
                 info.free();
-#else
-                icon_pixbuf = icon_theme.load_icon(item.icon_name, icon_size, 0);
 #endif
+                aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
+                if ((int) aspect_ratio != 1) {
+                    new_width = (int) (icon_size*aspect_ratio);
+                    info = icon_theme.lookup_icon(icon_name, new_width, 0);
+                    icon_pixbuf = info.load_icon().copy();
+#if GTK3
+                    info.free();
+#endif
+                }
             } catch (Error e) {
                 stdout.printf("Error: %s\n", e.message);
                 has_icon = false;
             }
         } else {
-
-            IconPixmap icon_pixmap = IconPixmap();
-
+            has_icon = true;
             if (item.icon_pixmap.length == 0) {
                 has_icon = false;
             } else if (item.icon_pixmap[0].bytes.length == 0) {
@@ -209,7 +214,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
 
             if (has_icon) {
-                icon_pixmap = item.icon_pixmap[0];
+                IconPixmap icon_pixmap = item.icon_pixmap[0];
                 if (item.attention_icon_pixmap.length != 0) {
                     if (item.attention_icon_pixmap[0].bytes.length != 0) {
                         icon_pixmap = item.attention_icon_pixmap[0];
@@ -235,6 +240,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                         icon_pixmap.width,
                                                         icon_pixmap.height,
                                                         Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
+                aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
             }
         }
 
@@ -246,9 +252,11 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        float aspect_ratio = icon_pixbuf.width / icon_pixbuf.height;
-        if ((int) aspect_ratio != 1) {
-            int new_width = (int) (icon_size*aspect_ratio);
+        if ((int) aspect_ratio == 1) {
+            if (icon_pixbuf.height > icon_size) {
+                icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
+            }
+        } else {
             if (icon_pixbuf.height > icon_size) {
                 icon_pixbuf = icon_pixbuf.scale_simple(new_width, icon_size, Gdk.InterpType.BILINEAR);
             }
@@ -259,8 +267,77 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        if (icon_pixbuf.height > icon_size) {
-            icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
+        // overlay icon
+        Gdk.Pixbuf overlay_icon_pixbuf = null;
+        bool has_overlay_icon = true;
+        if (item.overlay_icon_name == null) {
+            has_overlay_icon = false;
+        } else if (item.overlay_icon_name.length == 0) {
+            has_overlay_icon = false;
+        }
+
+        if (has_overlay_icon) {
+            icon_theme.rescan_if_needed();
+            try {
+#if GTK3
+                Gtk.IconInfo info = icon_theme.lookup_icon(item.overlay_icon_name, icon_size/2, 0);
+                overlay_icon_pixbuf = info.load_icon().copy();
+                info.free();
+#else
+                overlay_icon_pixbuf = icon_theme.load_icon(item.overlay_icon_name, icon_size/2, 0);
+#endif
+            } catch (Error e) {
+                stdout.printf("Error: %s\n", e.message);
+                has_overlay_icon = false;
+            }
+        } else {
+            has_overlay_icon = true;
+            if (item.overlay_icon_pixmap.length == 0) {
+                has_overlay_icon = false;
+            } else if (item.overlay_icon_pixmap[0].bytes.length == 0) {
+                has_overlay_icon = false;
+            }
+
+            if (has_overlay_icon) {
+                IconPixmap overlay_icon_pixmap = item.overlay_icon_pixmap[0];
+
+                uint[] new_bytes = (uint[]) overlay_icon_pixmap.bytes;
+                for (int i = 0; i < new_bytes.length; i++) {
+                    new_bytes[i] = new_bytes[i].to_big_endian();
+                }
+
+                overlay_icon_pixmap.bytes = (uint8[]) new_bytes;
+                for (int i = 0; i < overlay_icon_pixmap.bytes.length; i = i+4) {
+                    uint8 red = overlay_icon_pixmap.bytes[i];
+                    overlay_icon_pixmap.bytes[i] = overlay_icon_pixmap.bytes[i+2];
+                    overlay_icon_pixmap.bytes[i+2] = red;
+                }
+
+                overlay_icon_pixbuf = new Gdk.Pixbuf.from_data(overlay_icon_pixmap.bytes,
+                                                        Gdk.Colorspace.RGB,
+                                                        true,
+                                                        8,
+                                                        overlay_icon_pixmap.width,
+                                                        overlay_icon_pixmap.height,
+                                                        Cairo.Format.ARGB32.stride_for_width(overlay_icon_pixmap.width));
+            }
+        }
+
+        if (has_overlay_icon) {
+            if (overlay_icon_pixbuf.height > icon_size/2) {
+                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(icon_size/2, icon_size/2, Gdk.InterpType.BILINEAR);
+            }
+            overlay_icon_pixbuf.composite(icon_pixbuf,
+                                          icon_pixbuf.width - overlay_icon_pixbuf.width,
+                                          icon_pixbuf.height - overlay_icon_pixbuf.height,
+                                          overlay_icon_pixbuf.width,
+                                          overlay_icon_pixbuf.height,
+                                          icon_pixbuf.width - overlay_icon_pixbuf.width,
+                                          icon_pixbuf.height - overlay_icon_pixbuf.height,
+                                          1,
+                                          1,
+                                          Gdk.InterpType.BILINEAR,
+                                          255);
         }
 
         if (icon == null) {
