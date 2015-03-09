@@ -33,15 +33,9 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        tooltip_text = item.title;
-        if (item.tool_tip.title != null) {
-            if (item.tool_tip.title.length != 0) {
-                tooltip_text = item.tool_tip.title;
-            }
-        }
+        update_tooltip();
 
         icon_theme = Gtk.IconTheme.get_default();
-
         if (item.icon_theme_path != null) {
             if (item.icon_theme_path.length != 0) {
                     icon_theme.prepend_search_path(item.icon_theme_path);
