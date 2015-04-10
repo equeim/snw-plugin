@@ -72,7 +72,11 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             active = true;
             menu.popup(null,
                        null,
+#if VALA_0_28
+                       (menu, ref x, ref y, out push_in) => {
+#else
                        (menu, out x, out y, out push_in) => {
+#endif
                            Xfce.PanelPlugin.position_menu(menu, out x, out y, out push_in, plugin);
                        },
                        event.button,
