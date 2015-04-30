@@ -1,6 +1,6 @@
 project(xfce4-snw-plugin)
 cmake_minimum_required(VERSION 2.6)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/vala)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 include(UseVala)
 
