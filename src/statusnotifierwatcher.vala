@@ -63,7 +63,7 @@ public class StatusNotifierWatcher : Object {
                 StatusNotifierItem ping_item = Bus.get_proxy_sync(BusType.SESSION,
                                                                   service,
                                                                   object_paths.index(i));
-                if (ping_item.title == null) {
+                if (ping_item.id == null) {
                     remove_item(null, service);
                     break;
                 } else {
