@@ -48,7 +48,6 @@ interface StatusNotifierItem : Object {
     public abstract ToolTip tool_tip { owned get; }
     public abstract GLib.ObjectPath menu { owned get; }
 
-    public abstract void context_menu(int x, int y) throws IOError;
     public abstract void activate(int x, int y) throws IOError;
     public abstract void secondary_activate(int x, int y) throws IOError;
     public abstract void scroll(int delta, string orientation) throws IOError;
