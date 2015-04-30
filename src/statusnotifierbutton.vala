@@ -236,32 +236,13 @@ public class StatusNotifierButton : Gtk.Button {
             }
 
             if (has_icon) {
-                IconPixmap icon_pixmap = item.icon_pixmap[0];
+                bool attention_pixmap = false;
                 if (item.attention_icon_pixmap.length != 0) {
                     if (item.attention_icon_pixmap[0].bytes.length != 0) {
-                        icon_pixmap = item.attention_icon_pixmap[0];
+                        attention_pixmap = true;
                     }
                 }
-
-                uint[] new_bytes = (uint[]) icon_pixmap.bytes;
-                for (int i = 0; i < new_bytes.length; i++) {
-                    new_bytes[i] = new_bytes[i].to_big_endian();
-                }
-
-                icon_pixmap.bytes = (uint8[]) new_bytes;
-                for (int i = 0; i < icon_pixmap.bytes.length; i = i+4) {
-                    uint8 red = icon_pixmap.bytes[i];
-                    icon_pixmap.bytes[i] = icon_pixmap.bytes[i+2];
-                    icon_pixmap.bytes[i+2] = red;
-                }
-
-                icon_pixbuf = new Gdk.Pixbuf.from_data(icon_pixmap.bytes,
-                                                        Gdk.Colorspace.RGB,
-                                                        true,
-                                                        8,
-                                                        icon_pixmap.width,
-                                                        icon_pixmap.height,
-                                                        Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
+                icon_pixbuf = pixbuf_from_pixmap(attention_pixmap? item.attention_icon_pixmap[0] : item.icon_pixmap[0]);
                 aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
                 if (aspect_ratio != 1)
                     icon_width = icon_pixbuf.width;
@@ -316,29 +297,8 @@ public class StatusNotifierButton : Gtk.Button {
                 has_overlay_icon = false;
             }
 
-            if (has_overlay_icon) {
-                IconPixmap overlay_icon_pixmap = item.overlay_icon_pixmap[0];
-
-                uint[] new_bytes = (uint[]) overlay_icon_pixmap.bytes;
-                for (int i = 0; i < new_bytes.length; i++) {
-                    new_bytes[i] = new_bytes[i].to_big_endian();
-                }
-
-                overlay_icon_pixmap.bytes = (uint8[]) new_bytes;
-                for (int i = 0; i < overlay_icon_pixmap.bytes.length; i = i+4) {
-                    uint8 red = overlay_icon_pixmap.bytes[i];
-                    overlay_icon_pixmap.bytes[i] = overlay_icon_pixmap.bytes[i+2];
-                    overlay_icon_pixmap.bytes[i+2] = red;
-                }
-
-                overlay_icon_pixbuf = new Gdk.Pixbuf.from_data(overlay_icon_pixmap.bytes,
-                                                        Gdk.Colorspace.RGB,
-                                                        true,
-                                                        8,
-                                                        overlay_icon_pixmap.width,
-                                                        overlay_icon_pixmap.height,
-                                                        Cairo.Format.ARGB32.stride_for_width(overlay_icon_pixmap.width));
-            }
+            if (has_overlay_icon)
+                overlay_icon_pixbuf = pixbuf_from_pixmap(item.overlay_icon_pixmap[0]);
         }
 
         if (has_overlay_icon) {
@@ -370,7 +330,29 @@ public class StatusNotifierButton : Gtk.Button {
         }
     }
 
-    public void update_status(string status) {
+    Gdk.Pixbuf pixbuf_from_pixmap(IconPixmap icon_pixmap) {
+        uint[] new_bytes = (uint[]) icon_pixmap.bytes;
+        for (int i = 0; i < new_bytes.length; i++) {
+            new_bytes[i] = new_bytes[i].to_big_endian();
+        }
+
+        uint8[] new_bytes8 = (uint8[]) new_bytes;
+        for (int i = 0; i < new_bytes8.length; i = i + 4) {
+            uint8 red = new_bytes8[i];
+            new_bytes8[i] = new_bytes8[i + 2];
+            new_bytes8[i + 2] = red;
+        }
+
+        return new Gdk.Pixbuf.from_data(new_bytes8,
+                                        Gdk.Colorspace.RGB,
+                                        true,
+                                        8,
+                                        icon_pixmap.width,
+                                        icon_pixmap.height,
+                                        Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
+    }
+
+    void update_status(string status) {
         switch (status) {
         case "Passive":
             hide();
