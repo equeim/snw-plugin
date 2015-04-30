@@ -108,11 +108,13 @@ public class StatusNotifierWidget : Gtk.Box {
         return false;
     }
 
+#if !GTK3
     Gtk.Orientation get_handle_orientation() {
         if (orientation == Gtk.Orientation.HORIZONTAL)
             return Gtk.Orientation.VERTICAL;
         return Gtk.Orientation.HORIZONTAL;
     }
+#endif
 
     SNWPlugin plugin;
     Array<StatusNotifierButton> buttons;
