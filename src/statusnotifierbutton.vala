@@ -18,7 +18,7 @@
 
 using GLib;
 
-public class StatusNotifierButton : Gtk.ToggleButton {
+public class StatusNotifierButton : Gtk.Button {
 
     public StatusNotifierButton(string service, string object_path, SNWPlugin plugin) {
         this.service = service;
@@ -47,7 +47,6 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             if (item.menu.length != 0) {
                 menu = new DbusmenuGtk.Menu(service, item.menu);
                 menu.attach_to_widget(this, null);
-                menu.deactivate.connect(hide_menu);
             }
         }
 
@@ -56,7 +55,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         icon_theme = Gtk.IconTheme.get_default();
         if (item.icon_theme_path != null) {
             if (item.icon_theme_path.length != 0) {
-                    icon_theme.prepend_search_path(item.icon_theme_path);
+                icon_theme.prepend_search_path(item.icon_theme_path);
             }
         }
 
@@ -65,6 +64,7 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         //
 
         button_press_event.connect(button_pressed);
+        button_release_event.connect(button_released);
         scroll_event.connect(wheel_rotated);
         query_tooltip.connect(tooltip_requested);
 
@@ -79,31 +79,38 @@ public class StatusNotifierButton : Gtk.ToggleButton {
     // Signal handlers
     //
 
-    void hide_menu() {
-        if (active) {
-            active = false;
-        }
-    }
-
     bool button_pressed(Gdk.EventButton event) {
-        if (event.button == 1) {
-            active = true;
+        if (event.button == 3) {
+            if (!menu_title_added) {
+                Gtk.SeparatorMenuItem separator = new Gtk.SeparatorMenuItem();
+                menu.prepend(separator);
+                separator.show();
+                Gtk.MenuItem title_item = new Gtk.MenuItem.with_label(service);
+                if (item.title != null) {
+                    if (item.title.length != 0)
+                        title_item.label = item.title;
+                }
+                title_item.sensitive = false;
+                menu.prepend(title_item);
+                title_item.show();
+
+                menu_title_added = true;
+            }
             menu.popup(null,
                        null,
-#if VALA_0_28
-                       (menu, ref x, ref y, out push_in) => {
-#else
-                       (menu, out x, out y, out push_in) => {
-#endif
-                           Xfce.PanelPlugin.position_menu(menu, out x, out y, out push_in, plugin);
-                       },
+                       null,
                        event.button,
                        event.time);
-        } else if (event.button == 2) {
-            item.activate((int) event.x_root, (int) event.y_root);
-        } else if (event.button == 3) {
-            plugin.button_press_event(event);
+            return true;
         }
+        return false;
+    }
+
+    bool button_released(Gdk.EventButton event) {
+        if (event.button == 1)
+            item.activate((int) event.x_root, (int) event.y_root);
+        else if (event.button == 2)
+            item.secondary_activate((int) event.x_root, (int) event.y_root);
         return false;
     }
 
@@ -150,9 +157,8 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                     tooltip_markup = item.tool_tip.title;
                 } else {
                     string str = "<markup>" + item.tool_tip.title + "</markup>";
-                    if (str.contains("&")) {
+                    if (str.contains("&"))
                         str = str.replace("&","&amp;");
-                    }
                     QRichTextParser parser = new QRichTextParser(str);
                     parser.translate_markup();
                     tooltip_image = parser.icon;
@@ -168,37 +174,32 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                     object_path);
 
         int thickness;
-
 #if GTK3
-        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+        if (plugin.orientation == Gtk.Orientation.HORIZONTAL)
             thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).top;
-        } else {
+        else
             thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).left;
-        }
         thickness += 2;
 #else
-        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-            thickness = 2 * this.style.ythickness;
-        } else {
-            thickness = 2 * this.style.xthickness;
-        }
+        if (plugin.orientation == Gtk.Orientation.HORIZONTAL)
+            thickness = 2 * style.ythickness;
+        else
+            thickness = 2 * style.xthickness;
 #endif
 
+        bool has_icon = true;
         int icon_size = plugin.size - thickness;
+        float aspect_ratio = 1;
+        int icon_width = icon_size;
+        int overlay_icon_size = icon_size / 2;
 
         Gdk.Pixbuf icon_pixbuf = null;
 
-        bool has_icon = true;
-
-        float aspect_ratio = 0;
-        int new_width = 0;
-
         string icon_name = item.icon_name;
-        if (icon_name == null) {
+        if (icon_name == null)
             has_icon = false;
-        } else if (icon_name.length == 0) {
+        else if (icon_name.length == 0)
             has_icon = false;
-        }
 
         if (has_icon) {
             if (item.attention_icon_name != null) {
@@ -207,24 +208,24 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                 }
             }
             icon_theme.rescan_if_needed();
-            try {
-                Gtk.IconInfo info = icon_theme.lookup_icon(icon_name, icon_size, 0);
+
+            Gtk.IconInfo info = icon_theme.lookup_icon(icon_name, icon_size, 0);
+            if (info == null) {
+                has_icon = false;
+            } else {
                 icon_pixbuf = info.load_icon().copy();
 #if GTK3
                 info.free();
 #endif
                 aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
                 if (aspect_ratio != 1) {
-                    new_width = (int) (icon_size*aspect_ratio);
-                    info = icon_theme.lookup_icon(icon_name, new_width, 0);
+                    icon_width = (int) (icon_size * aspect_ratio);
+                    info = icon_theme.lookup_icon(icon_name, icon_width, 0);
                     icon_pixbuf = info.load_icon().copy();
 #if GTK3
-                    info.free();
+                info.free();
 #endif
                 }
-            } catch (Error e) {
-                stdout.printf("Error: %s\n", e.message);
-                has_icon = false;
             }
         } else {
             has_icon = true;
@@ -262,6 +263,8 @@ public class StatusNotifierButton : Gtk.ToggleButton {
                                                         icon_pixmap.height,
                                                         Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
                 aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
+                if (aspect_ratio != 1)
+                    icon_width = icon_pixbuf.width;
             }
         }
 
@@ -273,23 +276,19 @@ public class StatusNotifierButton : Gtk.ToggleButton {
             }
         }
 
-        if (aspect_ratio == 1) {
-            if (icon_pixbuf.height > icon_size) {
-                icon_pixbuf = icon_pixbuf.scale_simple(icon_size, icon_size, Gdk.InterpType.BILINEAR);
-            }
-        } else {
-            if (icon_pixbuf.height > icon_size) {
-                icon_pixbuf = icon_pixbuf.scale_simple(new_width, icon_size, Gdk.InterpType.BILINEAR);
-            }
+        if (icon_pixbuf.height > icon_size) {
+            icon_pixbuf = icon_pixbuf.scale_simple(icon_width, icon_size, Gdk.InterpType.BILINEAR);
+        }
+
+        if (aspect_ratio != 1) {
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                if (new_width != icon_size) {
-                    set_size_request(new_width, plugin.size);
-                }
+                set_size_request(icon_width + thickness, plugin.size);
             }
         }
 
         // overlay icon
         Gdk.Pixbuf overlay_icon_pixbuf = null;
+
         bool has_overlay_icon = true;
         if (item.overlay_icon_name == null) {
             has_overlay_icon = false;
@@ -299,18 +298,16 @@ public class StatusNotifierButton : Gtk.ToggleButton {
 
         if (has_overlay_icon) {
             icon_theme.rescan_if_needed();
-            try {
-#if GTK3
-                Gtk.IconInfo info = icon_theme.lookup_icon(item.overlay_icon_name, icon_size/2, 0);
-                overlay_icon_pixbuf = info.load_icon().copy();
-                info.free();
-#else
-                overlay_icon_pixbuf = icon_theme.load_icon(item.overlay_icon_name, icon_size/2, 0);
-#endif
-            } catch (Error e) {
-                stdout.printf("Error: %s\n", e.message);
+            Gtk.IconInfo info = icon_theme.lookup_icon(item.overlay_icon_name, overlay_icon_size, 0);
+
+            if (info == null) {
                 has_overlay_icon = false;
-            }
+            } else {
+                overlay_icon_pixbuf = info.load_icon().copy();
+#if GTK3
+                info.free();
+#endif
+            } 
         } else {
             has_overlay_icon = true;
             if (item.overlay_icon_pixmap.length == 0) {
@@ -345,16 +342,18 @@ public class StatusNotifierButton : Gtk.ToggleButton {
         }
 
         if (has_overlay_icon) {
-            if (overlay_icon_pixbuf.height > icon_size/2) {
-                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(icon_size/2, icon_size/2, Gdk.InterpType.BILINEAR);
+            if (overlay_icon_pixbuf.height > overlay_icon_size) {
+                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(overlay_icon_size, overlay_icon_size, Gdk.InterpType.BILINEAR);
             }
+            int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
+            int y = icon_pixbuf.height - overlay_icon_pixbuf.height;
             overlay_icon_pixbuf.composite(icon_pixbuf,
-                                          icon_pixbuf.width - overlay_icon_pixbuf.width,
-                                          icon_pixbuf.height - overlay_icon_pixbuf.height,
-                                          overlay_icon_pixbuf.width,
-                                          overlay_icon_pixbuf.height,
-                                          icon_pixbuf.width - overlay_icon_pixbuf.width,
-                                          icon_pixbuf.height - overlay_icon_pixbuf.height,
+                                          x,
+                                          y,
+                                          overlay_icon_size,
+                                          overlay_icon_size,
+                                          x,
+                                          y,
                                           1,
                                           1,
                                           Gdk.InterpType.BILINEAR,
@@ -391,11 +390,15 @@ public class StatusNotifierButton : Gtk.ToggleButton {
     // Private members
     //
 
-    SNWPlugin plugin;
-    StatusNotifierItem item;
     string service;
     string object_path;
+    SNWPlugin plugin;
+
+    StatusNotifierItem item;
+
     DbusmenuGtk.Menu menu;
+    bool menu_title_added;
+
     Gtk.Image icon;
     Gtk.IconTheme icon_theme;
     Icon tooltip_image;
