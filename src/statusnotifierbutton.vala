@@ -27,15 +27,6 @@ public class StatusNotifierButton : Gtk.Button {
 
         set_relief(Gtk.ReliefStyle.NONE);
 
-#if GTK3
-        Gtk.CssProvider provider = new Gtk.CssProvider();
-        provider.load_from_data("""
-                                StatusNotifierButton {
-                                    padding: 2px 2px 2px 2px;
-                                }""", -1);
-        get_style_context().add_provider(provider, -99);
-#endif
-
         item = Bus.get_proxy_sync(BusType.SESSION,
                                 service,
                                 object_path);
@@ -174,18 +165,10 @@ public class StatusNotifierButton : Gtk.Button {
                                                     object_path);
 
         int thickness;
-#if GTK3
-        if (plugin.orientation == Gtk.Orientation.HORIZONTAL)
-            thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).top;
-        else
-            thickness = 2 * get_style_context().get_padding(Gtk.StateFlags.NORMAL).left;
-        thickness += 2;
-#else
         if (plugin.orientation == Gtk.Orientation.HORIZONTAL)
             thickness = 2 * style.ythickness;
         else
             thickness = 2 * style.xthickness;
-#endif
 
         bool has_icon = true;
         int icon_size = plugin.size - thickness;
@@ -214,17 +197,11 @@ public class StatusNotifierButton : Gtk.Button {
                 has_icon = false;
             } else {
                 icon_pixbuf = info.load_icon().copy();
-#if GTK3
-                info.free();
-#endif
                 aspect_ratio = (float) icon_pixbuf.width / (float) icon_pixbuf.height;
                 if (aspect_ratio != 1) {
                     icon_width = (int) (icon_size * aspect_ratio);
                     info = icon_theme.lookup_icon(icon_name, icon_width, 0);
                     icon_pixbuf = info.load_icon().copy();
-#if GTK3
-                info.free();
-#endif
                 }
             }
         } else {
@@ -285,9 +262,6 @@ public class StatusNotifierButton : Gtk.Button {
                 has_overlay_icon = false;
             } else {
                 overlay_icon_pixbuf = info.load_icon().copy();
-#if GTK3
-                info.free();
-#endif
             } 
         } else {
             has_overlay_icon = true;

@@ -31,7 +31,6 @@ public class StatusNotifierWidget : Gtk.Box {
 
         buttons = new Array<StatusNotifierButton>();
 
-#if !GTK3
         Gtk.rc_parse_string("""
                             style "button-style"
                             {
@@ -41,15 +40,10 @@ public class StatusNotifierWidget : Gtk.Box {
                             }
                             widget_class "*<StatusNotifierButton>" style "button-style"
                             """);
-#endif
 
         handle = new Gtk.DrawingArea();
         handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
-#if GTK3
-        handle.draw.connect(draw_handle);
-#else
         handle.expose_event.connect(draw_handle);
-#endif
         pack_start(handle);
     }
 
@@ -83,14 +77,6 @@ public class StatusNotifierWidget : Gtk.Box {
         change_size(plugin.size);
     }
 
-#if GTK3
-    bool draw_handle(Cairo.Context context) {
-        handle.get_style_context().render_handle(context,
-                                                0,
-                                                0,
-                                                handle.get_allocated_width(),
-                                                handle.get_allocated_height());
-#else
     bool draw_handle(Gdk.EventExpose event) {
         Gtk.paint_handle(handle.style,
                             handle.window,
@@ -104,17 +90,14 @@ public class StatusNotifierWidget : Gtk.Box {
                             handle.allocation.width,
                             handle.allocation.height,
                             get_handle_orientation());
-#endif
         return false;
     }
 
-#if !GTK3
     Gtk.Orientation get_handle_orientation() {
         if (orientation == Gtk.Orientation.HORIZONTAL)
             return Gtk.Orientation.VERTICAL;
         return Gtk.Orientation.HORIZONTAL;
     }
-#endif
 
     SNWPlugin plugin;
     Array<StatusNotifierButton> buttons;
