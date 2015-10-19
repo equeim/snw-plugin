@@ -16,20 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-using GLib;
 
 public class StatusNotifierWidget : Gtk.Box {
+    SNWPlugin plugin;
+    StatusNotifierWatcher watcher;
+    GLib.Array<StatusNotifierButton> buttons;
+    Gtk.DrawingArea handle;
 
     public StatusNotifierWidget(SNWPlugin plugin) {
         this.plugin = plugin;
-        plugin.size_changed.connect(change_size);
-        plugin.orientation_changed.connect(change_orientation);
+
         watcher = new StatusNotifierWatcher();
-
-        watcher.connector.item_added.connect(add_button);
-        watcher.connector.item_removed.connect(remove_button);
-
-        buttons = new Array<StatusNotifierButton>();
+        buttons = new GLib.Array<StatusNotifierButton>();
 
         Gtk.rc_parse_string("""
                             style "button-style"
@@ -45,6 +43,12 @@ public class StatusNotifierWidget : Gtk.Box {
         handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
         handle.expose_event.connect(draw_handle);
         pack_start(handle);
+
+        plugin.size_changed.connect(change_size);
+        plugin.orientation_changed.connect(change_orientation);
+
+        watcher.connector.item_added.connect(add_button);
+        watcher.connector.item_removed.connect(remove_button);
     }
 
     void add_button(string service, string object_path) {
@@ -52,7 +56,6 @@ public class StatusNotifierWidget : Gtk.Box {
         buttons.append_val(button);
         pack_start(button);
         button.show_all();
-        button.update_icon();
     }
 
     void remove_button(int index) {
@@ -66,9 +69,9 @@ public class StatusNotifierWidget : Gtk.Box {
         else
 	        handle.set_size_request(size, 8);
 
-        for(int i = 0; i < buttons.length; i++) {
-            buttons.index(i).change_size(size);
-        }
+        foreach (StatusNotifierButton button in buttons.data)
+            button.change_size(size);
+
         return true;
     }
 
@@ -98,9 +101,4 @@ public class StatusNotifierWidget : Gtk.Box {
             return Gtk.Orientation.VERTICAL;
         return Gtk.Orientation.HORIZONTAL;
     }
-
-    SNWPlugin plugin;
-    Array<StatusNotifierButton> buttons;
-    Gtk.DrawingArea handle;
-    StatusNotifierWatcher watcher;
 }
