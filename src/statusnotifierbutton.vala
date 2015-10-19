@@ -210,9 +210,12 @@ public class StatusNotifierButton : Gtk.Button {
                 } else {
                     icon.set_from_source(item.attention_icon_name);
                 }
-            } else if (has_attention_icon_pixmap)
+                return;
+            }
+            if (has_attention_icon_pixmap) {
                 icon.set_from_pixbuf(pixbuf_from_pixmap(item.attention_icon_pixmap[0]));
-            return;
+                return;
+            }
         }
 
         Gdk.Pixbuf icon_pixbuf = null;
