@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-using GLib;
-
 struct IconPixmap {
     int width;
     int height;
@@ -32,7 +30,7 @@ struct ToolTip {
 }
 
 [DBus (name = "org.kde.StatusNotifierItem")]
-interface StatusNotifierItem : Object {
+interface StatusNotifierItem : GLib.Object {
     public abstract string category { owned get; }
     public abstract string id { owned get; }
     public abstract string title { owned get; }
@@ -48,9 +46,9 @@ interface StatusNotifierItem : Object {
     public abstract ToolTip tool_tip { owned get; }
     public abstract GLib.ObjectPath menu { owned get; }
 
-    public abstract void activate(int x, int y) throws IOError;
-    public abstract void secondary_activate(int x, int y) throws IOError;
-    public abstract void scroll(int delta, string orientation) throws IOError;
+    public abstract void activate(int x, int y) throws GLib.IOError;
+    public abstract void secondary_activate(int x, int y) throws GLib.IOError;
+    public abstract void scroll(int delta, string orientation) throws GLib.IOError;
 
     public signal void new_title();
     public signal void new_icon();
