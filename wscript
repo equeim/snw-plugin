@@ -28,12 +28,6 @@ def build(context):
     )
 
     context(
-        appname="xfce4-snw-plugin",
-        features="intltool_po",
-        podir="po"
-    )
-
-    context(
         features="intltool_in",
         podir="po",
         style="desktop",
