@@ -192,27 +192,26 @@ public class StatusNotifierButton : Gtk.Button {
         GLib.stdout.printf("has_overlay_icon_pixap: %s\n", has_overlay_icon_pixmap.to_string());
         GLib.stdout.printf("icon_theme is null: %s\n", (icon_theme == null).to_string());*/
 
-        if (has_attention_icon_name) {
-            if (custom_icon_theme) {
-                icon_theme.rescan_if_needed();
-                try {
-                    icon.set_from_pixbuf(icon_theme.load_icon(item.attention_icon_name,
-                                         icon_size,
-                                         0));
-                    if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                        set_size_request(plugin.size * (icon.pixbuf.width / icon.pixbuf.height),
-                                         plugin.size);
+        if (item.status == "NeedsAttention") {
+            if (has_attention_icon_name) {
+                if (custom_icon_theme) {
+                    icon_theme.rescan_if_needed();
+                    try {
+                        icon.set_from_pixbuf(icon_theme.load_icon(item.attention_icon_name,
+                                             icon_size,
+                                             0));
+                        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+                            set_size_request(plugin.size * (icon.pixbuf.width / icon.pixbuf.height),
+                                             plugin.size);
+                        }
+                    } catch (GLib.Error error) {
+                        icon.set_from_source("image-missing");
                     }
-                } catch (GLib.Error error) {
-                    icon.set_from_source("image-missing");
+                } else {
+                    icon.set_from_source(item.attention_icon_name);
                 }
-            } else {
-                icon.set_from_source(item.attention_icon_name);
-            }
-            return;
-        }
-        if (has_attention_icon_pixmap) {
-            icon.set_from_pixbuf(pixbuf_from_pixmap(item.attention_icon_pixmap[0]));
+            } else if (has_attention_icon_pixmap)
+                icon.set_from_pixbuf(pixbuf_from_pixmap(item.attention_icon_pixmap[0]));
             return;
         }
 
