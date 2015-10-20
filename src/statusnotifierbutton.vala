@@ -151,7 +151,6 @@ public class StatusNotifierButton : Gtk.Button {
         int icon_size = plugin.size - thickness;
         int overlay_icon_size = icon_size / 2;
 
-
         bool has_icon_name = false;
         if (item.icon_name != null)
             if (item.icon_name.length != 0)
@@ -192,100 +191,98 @@ public class StatusNotifierButton : Gtk.Button {
         GLib.stdout.printf("has_overlay_icon_pixap: %s\n", has_overlay_icon_pixmap.to_string());
         GLib.stdout.printf("icon_theme is null: %s\n", (icon_theme == null).to_string());*/
 
+        Gdk.Pixbuf icon_pixbuf = null;
+
         if (item.status == "NeedsAttention") {
             if (has_attention_icon_name) {
                 if (custom_icon_theme) {
                     icon_theme.rescan_if_needed();
                     try {
-                        icon.set_from_pixbuf(icon_theme.load_icon(item.attention_icon_name,
-                                             icon_size,
-                                             0));
-                        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                            set_size_request(plugin.size * (icon.pixbuf.width / icon.pixbuf.height),
-                                             plugin.size);
-                        }
+                        icon_pixbuf = icon_theme.load_icon(item.attention_icon_name,
+                                                            icon_size,
+                                                            0);
                     } catch (GLib.Error error) {
                         icon.set_from_source("image-missing");
                     }
                 } else {
                     icon.set_from_source(item.attention_icon_name);
                 }
-                return;
+            } else if (has_attention_icon_pixmap) {
+                icon_pixbuf = pixbuf_from_pixmap(item.attention_icon_pixmap[0]);
             }
-            if (has_attention_icon_pixmap) {
-                icon.set_from_pixbuf(pixbuf_from_pixmap(item.attention_icon_pixmap[0]));
-                return;
-            }
-        }
-
-        Gdk.Pixbuf icon_pixbuf = null;
-
-        if (has_icon_name) {
-            if (custom_icon_theme ||
-                    has_overlay_icon_name ||
-                    has_overlay_icon_pixmap) {
-                icon_theme.rescan_if_needed();
-                try {
-                    icon_pixbuf = icon_theme.load_icon(item.icon_name,
-                                                       icon_size,
-                                                       0);
-                } catch (GLib.Error error) {
-                    icon.set_from_source("image-missing");
-                    return;
-                }
-            } else {
-                icon.set_from_source(item.icon_name);
-                return;
-            }
-        } else if (has_icon_pixmap) {
-            icon_pixbuf = pixbuf_from_pixmap(item.icon_pixmap[0]);
         } else {
-            icon.set_from_source("image-missing");
-            return;
-        }
-
-        Gdk.Pixbuf overlay_icon_pixbuf = null;
-
-        if (has_overlay_icon_name) {
-            try {
-                overlay_icon_pixbuf = icon_theme.load_icon(item.overlay_icon_name,
-                                                           overlay_icon_size,
+            if (has_icon_name) {
+                if (custom_icon_theme ||
+                        has_overlay_icon_name ||
+                        has_overlay_icon_pixmap) {
+                    icon_theme.rescan_if_needed();
+                    try {
+                        icon_pixbuf = icon_theme.load_icon(item.icon_name,
+                                                           icon_size,
                                                            0);
-            } catch (GLib.Error error) { }
-        } else if (has_overlay_icon_pixmap) {
-            overlay_icon_pixbuf = pixbuf_from_pixmap(item.overlay_icon_pixmap[0]);
-        }
-
-        if (overlay_icon_pixbuf != null) {
-            if (overlay_icon_pixbuf.height > overlay_icon_size) {
-                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(overlay_icon_size,
-                                                                       overlay_icon_size,
-                                                                       Gdk.InterpType.BILINEAR);
+                    } catch (GLib.Error error) {
+                        icon.set_from_source("image-missing");
+                    }
+                } else {
+                    icon.set_from_source(item.icon_name);
+                }
+            } else if (has_icon_pixmap) {
+                icon_pixbuf = pixbuf_from_pixmap(item.icon_pixmap[0]);
+            } else {
+                icon.set_from_source("image-missing");
             }
 
-            int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
-            int y = icon_pixbuf.height - overlay_icon_pixbuf.height;
+            Gdk.Pixbuf overlay_icon_pixbuf = null;
 
-            overlay_icon_pixbuf.composite(icon_pixbuf,
-                                          x,
-                                          y,
-                                          overlay_icon_size,
-                                          overlay_icon_size,
-                                          x,
-                                          y,
-                                          1,
-                                          1,
-                                          Gdk.InterpType.BILINEAR,
-                                          255);
+            if (has_overlay_icon_name) {
+                try {
+                    overlay_icon_pixbuf = icon_theme.load_icon(item.overlay_icon_name,
+                                                               overlay_icon_size,
+                                                               0);
+                } catch (GLib.Error error) { }
+            } else if (has_overlay_icon_pixmap) {
+                overlay_icon_pixbuf = pixbuf_from_pixmap(item.overlay_icon_pixmap[0]);
+            }
+
+            if (overlay_icon_pixbuf != null) {
+                if (overlay_icon_pixbuf.height > overlay_icon_size) {
+                    overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(overlay_icon_size,
+                                                                           overlay_icon_size,
+                                                                           Gdk.InterpType.BILINEAR);
+                }
+
+                int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
+                int y = icon_pixbuf.height - overlay_icon_pixbuf.height;
+
+                overlay_icon_pixbuf.composite(icon_pixbuf,
+                                              x,
+                                              y,
+                                              overlay_icon_size,
+                                              overlay_icon_size,
+                                              x,
+                                              y,
+                                              1,
+                                              1,
+                                              Gdk.InterpType.BILINEAR,
+                                              255);
+            }
         }
 
-        icon.set_from_pixbuf(icon_pixbuf);
-
-        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-            set_size_request(plugin.size * (icon_pixbuf.width / icon_pixbuf.height),
-                             plugin.size);
-        } else {
+        if (icon_pixbuf == null) {
             set_size_request(plugin.size, plugin.size);
+        } else {
+            icon.set_from_pixbuf(icon_pixbuf);
+
+            if (icon_pixbuf.width > icon_pixbuf.height &&
+                    plugin.orientation == Gtk.Orientation.HORIZONTAL)
+                set_size_request(plugin.size * (icon_pixbuf.width / icon_pixbuf.height),
+                                 plugin.size);
+            else if (icon_pixbuf.height > icon_pixbuf.width &&
+                    plugin.orientation == Gtk.Orientation.VERTICAL)
+                set_size_request(plugin.size,
+                                 plugin.size * (icon_pixbuf.height / icon_pixbuf.width));
+            else
+                set_size_request(plugin.size, plugin.size);
         }
     }
     
