@@ -144,7 +144,7 @@ public class QRichTextParser
                 if (attr == "src" || attr == "source")
                 {
                     if (icon != null)
-                        stderr.printf("Multiple icons is not supported. Used only first\n");
+                        //stderr.printf("Multiple icons is not supported. Used only first\n");
                     if (attr_values[i][0] == '/')
                         icon = new FileIcon(File.new_for_path(attr_values[i]));
                     else
