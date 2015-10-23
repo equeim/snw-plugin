@@ -16,89 +16,89 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+namespace StatusNotifier {
+    public class Widget : Gtk.Box {
+        Xfce.PanelPlugin plugin;
+        StatusNotifier.Watcher watcher;
+        GLib.Array<StatusNotifier.Button> buttons;
+        Gtk.DrawingArea handle;
 
-public class StatusNotifierWidget : Gtk.Box {
-    SNWPlugin plugin;
-    StatusNotifierWatcher watcher;
-    GLib.Array<StatusNotifierButton> buttons;
-    Gtk.DrawingArea handle;
+        public Widget(Xfce.PanelPlugin plugin) {
+            this.plugin = plugin;
 
-    public StatusNotifierWidget(SNWPlugin plugin) {
-        this.plugin = plugin;
+            watcher = new StatusNotifier.Watcher();
+            buttons = new GLib.Array<StatusNotifier.Button>();
 
-        watcher = new StatusNotifierWatcher();
-        buttons = new GLib.Array<StatusNotifierButton>();
+            Gtk.rc_parse_string("""
+                                style "button-style"
+                                {
+                                    GtkWidget::focus-line-width = 0
+                                    GtkWidget::focus-padding = 0
+                                    GtkButton::inner-border = {0,0,0,0}
+                                }
+                                widget_class "*<StatusNotifierButton>" style "button-style"
+                                """);
 
-        Gtk.rc_parse_string("""
-                            style "button-style"
-                            {
-                                GtkWidget::focus-line-width = 0
-                                GtkWidget::focus-padding = 0
-                                GtkButton::inner-border = {0,0,0,0}
-                            }
-                            widget_class "*<StatusNotifierButton>" style "button-style"
-                            """);
+            handle = new Gtk.DrawingArea();
+            handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
+            handle.expose_event.connect(draw_handle);
+            pack_start(handle);
 
-        handle = new Gtk.DrawingArea();
-        handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
-        handle.expose_event.connect(draw_handle);
-        pack_start(handle);
+            plugin.size_changed.connect(change_size);
+            plugin.orientation_changed.connect(change_orientation);
 
-        plugin.size_changed.connect(change_size);
-        plugin.orientation_changed.connect(change_orientation);
+            watcher.connector.item_added.connect(add_button);
+            watcher.connector.item_removed.connect(remove_button);
+        }
 
-        watcher.connector.item_added.connect(add_button);
-        watcher.connector.item_removed.connect(remove_button);
-    }
+        void add_button(string bus_name, string object_path) {
+            StatusNotifier.Button button = new StatusNotifier.Button(bus_name, object_path, plugin);
+            buttons.append_val(button);
+            pack_start(button);
+        }
 
-    void add_button(string service, string object_path) {
-        StatusNotifierButton button = new StatusNotifierButton(service, object_path, plugin);
-        buttons.append_val(button);
-        pack_start(button);
-        button.show_all();
-    }
+        void remove_button(int index) {
+            remove(buttons.index(index));
+            buttons.remove_index(index);
+        }
 
-    void remove_button(int index) {
-        remove(buttons.index(index));
-        buttons.remove_index(index);
-    }
+        bool change_size(int size) {
+            if (orientation == Gtk.Orientation.HORIZONTAL)
+                    handle.set_size_request(8, size);
+            else
+                    handle.set_size_request(size, 8);
 
-    bool change_size(int size) {
-        if (orientation == Gtk.Orientation.HORIZONTAL)
-	        handle.set_size_request(8, size);
-        else
-	        handle.set_size_request(size, 8);
+            foreach (StatusNotifier.Button button in buttons.data)
+                button.change_size(size);
 
-        foreach (StatusNotifierButton button in buttons.data)
-            button.change_size(size);
+            return true;
+        }
 
-        return true;
-    }
+        void change_orientation(Gtk.Orientation new_orientation) {
+            orientation = new_orientation;
+            change_size(plugin.size);
+        }
 
-    void change_orientation(Gtk.Orientation new_orientation) {
-        orientation = new_orientation;
-        change_size(plugin.size);
-    }
+        bool draw_handle(Gdk.EventExpose event) {
+            Gtk.paint_handle(handle.style,
+                                handle.window,
+                                handle.get_state(),
+                                Gtk.ShadowType.NONE,
+                                handle.allocation,
+                                handle,
+                                null,
+                                0,
+                                0,
+                                handle.allocation.width,
+                                handle.allocation.height,
+                                get_handle_orientation());
+            return false;
+        }
 
-    bool draw_handle(Gdk.EventExpose event) {
-        Gtk.paint_handle(handle.style,
-                            handle.window,
-                            handle.get_state(),
-                            Gtk.ShadowType.NONE,
-                            handle.allocation,
-                            handle,
-                            null,
-                            0,
-                            0,
-                            handle.allocation.width,
-                            handle.allocation.height,
-                            get_handle_orientation());
-        return false;
-    }
-
-    Gtk.Orientation get_handle_orientation() {
-        if (orientation == Gtk.Orientation.HORIZONTAL)
-            return Gtk.Orientation.VERTICAL;
-        return Gtk.Orientation.HORIZONTAL;
+        Gtk.Orientation get_handle_orientation() {
+            if (orientation == Gtk.Orientation.HORIZONTAL)
+                return Gtk.Orientation.VERTICAL;
+            return Gtk.Orientation.HORIZONTAL;
+        }
     }
 }

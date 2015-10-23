@@ -16,16 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public class SNWPlugin : Xfce.PanelPlugin {
-    public override void @construct() {
-        StatusNotifierWidget widget = new StatusNotifierWidget(this);
-        add(widget);
-        add_action_widget(widget);
-        widget.show_all();
+
+namespace StatusNotifier {
+    GLib.DBusConnection DBusConnection;
+
+    public class Plugin : Xfce.PanelPlugin {
+        public override void @construct() {
+            try {
+                DBusConnection = GLib.Bus.get_sync(GLib.BusType.SESSION, null);
+            } catch (GLib.IOError error) {
+                GLib.stderr.printf("%s\n", error.message);
+            }
+
+            StatusNotifier.Widget widget = new StatusNotifier.Widget(this);
+            add(widget);
+            add_action_widget(widget);
+            widget.show_all();
+        }
     }
 }
 
 [ModuleInit]
 public Type xfce_panel_module_init(TypeModule module) {
-    return typeof (SNWPlugin);
+    return typeof (StatusNotifier.Plugin);
 }
