@@ -18,7 +18,7 @@
 
 namespace StatusNotifier {
     public errordomain PixmapError {
-        EMPTY
+        ERROR
     }
 
     public class Button : Gtk.Button {
@@ -28,7 +28,7 @@ namespace StatusNotifier {
 
         DbusmenuGtk.Menu menu;
 
-        Xfce.PanelImage icon;
+        Gtk.Image icon;
         Gtk.IconTheme icon_theme;
         bool custom_icon_theme;
 
@@ -53,7 +53,7 @@ namespace StatusNotifier {
                 }
             } catch (GLib.DBusError error) {}
 
-            icon = new Xfce.PanelImage();
+            icon = new Gtk.Image();
             add(icon);
             icon.show();
 
@@ -84,14 +84,14 @@ namespace StatusNotifier {
 
             try {
                 update_status(proxy.get_status());
-            } catch (GLib.DBusError error) {}
+            } catch (GLib.DBusError error) {
+                GLib.stderr.printf("%s\n", error.message);
+                show();
+            }
         }
 
         public void change_size(int size) {
-            if (icon.source == null)
-                update_icon();
-            else
-                set_size_request(size, size);
+            update_icon();
         }
 
         bool button_pressed(Gdk.EventButton event) {
@@ -144,108 +144,71 @@ namespace StatusNotifier {
         bool tooltip_requested(int x, int y, bool keyboard, Gtk.Tooltip tooltip) {
             tooltip.set_markup(tooltip_markup);
 
-            if (tooltip_icon_name.length != 0)
+            if (tooltip_icon_name == null) {
+                if (tooltip_icon_pixbuf != null)
+                    tooltip.set_icon(tooltip_icon_pixbuf);
+            } else {
                 tooltip.set_icon_from_icon_name(tooltip_icon_name, Gtk.IconSize.DIALOG);
-            else if (tooltip_icon_pixbuf != null)
-                tooltip.set_icon(tooltip_icon_pixbuf);
+            }
 
             return true;
         }
 
         void update_icon() {
-            int thickness;
+            int icon_size = plugin.size - 2;
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL)
-                thickness = 2 * style.ythickness;
+                icon_size -= 2 * style.ythickness;
             else
-                thickness = 2 * style.xthickness;
+                icon_size -= 2 * style.xthickness;
 
-            int icon_size = plugin.size - thickness;
             int overlay_icon_size = icon_size / 2;
 
             Gdk.Pixbuf icon_pixbuf = null;
+            icon_theme.rescan_if_needed();
 
             try {
                 if (proxy.get_status() == "NeedsAttention") {
                     string attention_icon_name = proxy.get_attention_icon_name();
-                    if (attention_icon_name.length == 0) {
-                        StatusNotifier.Item.IconPixmap[] attention_icon_pixmap = proxy.get_attention_icon_pixmap();
-
-                        bool has_attention_icon_pixmap = false;
-                        if (attention_icon_pixmap.length != 0)
-                            if (attention_icon_pixmap[0].bytes.length != 0)
-                                has_attention_icon_pixmap = true;
-
-                        if (has_attention_icon_pixmap)
-                            icon_pixbuf = pixbuf_from_pixmap(attention_icon_pixmap[0]);
-                        else
-                            throw new PixmapError.EMPTY("AttentionIconPixmap is empty");
-                    } else {
-                        if (custom_icon_theme) {
-                            icon_theme.rescan_if_needed();
-                            icon_pixbuf = icon_theme.load_icon(attention_icon_name,
-                                                               icon_size,
-                                                               0);
-                        } else {
-                            icon.set_from_source(attention_icon_name);
-                        }
-                    }
+                    if (attention_icon_name.length == 0)
+                        icon_pixbuf = pixbuf_from_pixmap(proxy.get_attention_icon_pixmap());
+                    else
+                        icon_pixbuf = load_icon_from_theme(attention_icon_name,
+                                                           icon_size);
                 } else {
                     string icon_name = proxy.get_icon_name();
 
-                    string overlay_icon_name = "";
-                    StatusNotifier.Item.IconPixmap[] overlay_icon_pixmap = {};
-
+                    Gdk.Pixbuf overlay_icon_pixbuf = null;
                     try {
-                        overlay_icon_name = proxy.get_overlay_icon_name();
-                        overlay_icon_pixmap = proxy.get_overlay_icon_pixmap();
-                    } catch (GLib.DBusError error) {}
-
-                    bool has_overlay_icon_name = false;
-                    if (overlay_icon_name.length != 0)
-                        has_overlay_icon_name = true;
-
-                    bool has_overlay_icon_pixmap = false;
-                    if (overlay_icon_pixmap.length != 0)
-                        if (overlay_icon_pixmap[0].bytes.length != 0)
-                            has_overlay_icon_pixmap = true;
+                        string overlay_icon_name = proxy.get_overlay_icon_name();
+                        if (overlay_icon_name.length == 0)
+                            overlay_icon_pixbuf = pixbuf_from_pixmap(proxy.get_overlay_icon_pixmap());
+                        else
+                            overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
+                                                                       overlay_icon_size);
+                    } catch (GLib.Error error) {}
 
                     if (icon_name.length == 0) {
-                        StatusNotifier.Item.IconPixmap[] icon_pixmap = proxy.get_icon_pixmap();
-
-                        bool has_icon_pixmap = false;
-                        if (icon_pixmap.length != 0)
-                            if (icon_pixmap[0].bytes.length != 0)
-                                has_icon_pixmap = true;
-
-                        if (has_icon_pixmap)
-                            icon_pixbuf = pixbuf_from_pixmap(icon_pixmap[0]);
-                        else
-                            throw new PixmapError.EMPTY("IconPixmap is empty");
+                        icon_pixbuf = pixbuf_from_pixmap(proxy.get_icon_pixmap());
                     } else {
-                        if (custom_icon_theme ||
-                                has_overlay_icon_name ||
-                                has_overlay_icon_pixmap)
-                            icon_pixbuf = icon_theme.load_icon(icon_name,
-                                                               icon_size,
-                                                               0);
-                        else
-                            icon.set_from_source(icon_name);
+                        icon_pixbuf = load_icon_from_theme(icon_name,
+                                                           icon_size);
                     }
 
-                    Gdk.Pixbuf overlay_icon_pixbuf = null;
-
-                    if (has_overlay_icon_name)
-                        overlay_icon_pixbuf = icon_theme.load_icon(overlay_icon_name,
-                                                                   overlay_icon_size,
-                                                                   0);
-                    else if (has_overlay_icon_pixmap)
-                        overlay_icon_pixbuf = pixbuf_from_pixmap(overlay_icon_pixmap[0]);
-
                     if (overlay_icon_pixbuf != null) {
-                        if (overlay_icon_pixbuf.height > overlay_icon_size) {
-                            overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(overlay_icon_size,
-                                                                                   overlay_icon_size,
-                                                                                   Gdk.InterpType.BILINEAR);
+                        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+                            if (overlay_icon_pixbuf.height > overlay_icon_size)
+                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
+                                    (int) (overlay_icon_pixbuf.width * ((float) overlay_icon_size / overlay_icon_pixbuf.height)),
+                                    overlay_icon_size,
+                                    Gdk.InterpType.BILINEAR
+                                );
+                        } else {
+                            if (overlay_icon_pixbuf.width > overlay_icon_size)
+                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
+                                    overlay_icon_size,
+                                    (int) (overlay_icon_pixbuf.height * ((float) overlay_icon_size / overlay_icon_pixbuf.width)),
+                                    Gdk.InterpType.BILINEAR
+                                );
                         }
 
                         int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
@@ -254,8 +217,8 @@ namespace StatusNotifier {
                         overlay_icon_pixbuf.composite(icon_pixbuf,
                                                       x,
                                                       y,
-                                                      overlay_icon_size,
-                                                      overlay_icon_size,
+                                                      overlay_icon_pixbuf.width,
+                                                      overlay_icon_pixbuf.height,
                                                       x,
                                                       y,
                                                       1,
@@ -265,38 +228,46 @@ namespace StatusNotifier {
                     }
                 }
             } catch (GLib.Error error) {
-                icon.set_from_source("image-missing");
-                if ( !(error is GLib.DBusError) )
+                try {
+                    icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
+                } catch (GLib.Error error) {
                     GLib.stderr.printf("%s\n", error.message);
+                    return;
+                }
+                GLib.stderr.printf("%s\n", error.message);
             }
 
-            if (icon_pixbuf == null) {
-                set_size_request(plugin.size, plugin.size);
-            } else {
-                icon.set_from_pixbuf(icon_pixbuf);
-
-                if (icon_pixbuf.width > icon_pixbuf.height &&
-                        plugin.orientation == Gtk.Orientation.HORIZONTAL)
-                    set_size_request(plugin.size * (icon_pixbuf.width / icon_pixbuf.height),
-                                     plugin.size);
-                else if (icon_pixbuf.height > icon_pixbuf.width &&
-                        plugin.orientation == Gtk.Orientation.VERTICAL)
-                    set_size_request(plugin.size,
-                                     plugin.size * (icon_pixbuf.height / icon_pixbuf.width));
-                else
+            if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
+                if (icon_pixbuf.height > icon_size)
+                    icon_pixbuf = icon_pixbuf.scale_simple(
+                        (int) (icon_pixbuf.width * ((float) icon_size / icon_pixbuf.height)),
+                        icon_size,
+                        Gdk.InterpType.BILINEAR
+                    );
+                if (icon_pixbuf.height >= icon_pixbuf.width)
                     set_size_request(plugin.size, plugin.size);
+                else
+                    set_size_request(icon_pixbuf.width + 2 + 2*style.xthickness, plugin.size);
+            } else {
+                if (icon_pixbuf.width > icon_size)
+                    icon_pixbuf = icon_pixbuf.scale_simple(
+                        icon_size,
+                        (int) (icon_pixbuf.height * ((float) icon_size / icon_pixbuf.width)),
+                        Gdk.InterpType.BILINEAR
+                    );
+                if (icon_pixbuf.width >= icon_pixbuf.height)
+                    set_size_request(plugin.size, plugin.size);
+                else
+                    set_size_request(plugin.size, icon_pixbuf.height + 2 + 2*style.ythickness);
             }
+
+            icon.set_from_pixbuf(icon_pixbuf);
         }
 
         void update_status(string status) {
-            switch (status) {
-            case "Passive":
+            if (status == "Passive")
                 hide();
-                break;
-            case "Active":
-                show();
-                break;
-            }
+            show();
         }
 
         void update_tooltip() {
@@ -304,19 +275,13 @@ namespace StatusNotifier {
             try {
                 tool_tip = proxy.get_tool_tip();
             } catch (GLib.DBusError error) {
+                set_generic_tooltip();
+                GLib.stderr.printf("%s\n", error.message);
                 return;
             }
 
             if (tool_tip.title.length == 0) {
-                string title = "";
-                try {
-                    title = proxy.get_title();
-                } catch (GLib.DBusError error) {}
-
-                if (title.length == 0)
-                    tooltip_markup = proxy.id;
-                else
-                    tooltip_markup = title;
+                set_generic_tooltip();
             } else {
                 string tooltip_tmp = tool_tip.title;
                 if (tool_tip.description.length != 0)
@@ -333,16 +298,54 @@ namespace StatusNotifier {
                 }
             }
 
-            tooltip_icon_name = tool_tip.icon_name;
-            if (tooltip_icon_name.length == 0) {
-                if (tool_tip.icon_pixmap.length != 0)
-                    if (tool_tip.icon_pixmap[0].bytes.length != 0)
-                        tooltip_icon_pixbuf = pixbuf_from_pixmap(tool_tip.icon_pixmap[0]);
+            if (tool_tip.icon_name.length == 0) {
+                try {
+                    tooltip_icon_pixbuf = pixbuf_from_pixmap(tool_tip.icon_pixmap);
+                } catch (PixmapError error) {}
+            } else {
+                tooltip_icon_name = tool_tip.icon_name;
             }
         }
 
-        Gdk.Pixbuf pixbuf_from_pixmap(StatusNotifier.Item.IconPixmap icon_pixmap) {
-            uint[] new_bytes = (uint[]) icon_pixmap.bytes;
+        void set_generic_tooltip() {
+            tooltip_icon_name = null;
+            tooltip_icon_pixbuf = null;
+            try {
+                string title = proxy.get_title();
+                if (title.length == 0)
+                    tooltip_markup = proxy.id;
+                else
+                    tooltip_markup = title;
+            } catch (GLib.DBusError error) {
+                tooltip_markup = proxy.id;
+            }
+        }
+
+        Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws GLib.Error {
+            Gdk.Pixbuf icon_pixbuf = icon_theme.load_icon(icon_name, size, 0);
+
+            if (icon_pixbuf.width > icon_pixbuf.height &&
+                    plugin.orientation == Gtk.Orientation.HORIZONTAL)
+                icon_pixbuf = icon_theme.load_icon(icon_name,
+                                                   (int) (size * ((float) icon_pixbuf.width / icon_pixbuf.height)),
+                                                   0);
+            else if (icon_pixbuf.height > icon_pixbuf.width &&
+                    plugin.orientation == Gtk.Orientation.VERTICAL)
+                 icon_pixbuf = icon_theme.load_icon(icon_name,
+                                                   (int) (size * ((float) icon_pixbuf.height / icon_pixbuf.width)),
+                                                   0);
+
+            return icon_pixbuf;
+        }
+
+        Gdk.Pixbuf pixbuf_from_pixmap(StatusNotifier.Item.IconPixmap[] icon_pixmap) throws PixmapError {
+            if (icon_pixmap.length == 0)
+                throw new PixmapError.ERROR("No pixmaps");
+
+            if (icon_pixmap[0].bytes.length == 0)
+                throw new PixmapError.ERROR("First pixmap is empty");
+
+            uint[] new_bytes = (uint[]) icon_pixmap[0].bytes;
             for (int i = 0; i < new_bytes.length; i++) {
                 new_bytes[i] = new_bytes[i].to_big_endian();
             }
@@ -358,9 +361,9 @@ namespace StatusNotifier {
                                             Gdk.Colorspace.RGB,
                                             true,
                                             8,
-                                            icon_pixmap.width,
-                                            icon_pixmap.height,
-                                            Cairo.Format.ARGB32.stride_for_width(icon_pixmap.width));
+                                            icon_pixmap[0].width,
+                                            icon_pixmap[0].height,
+                                            Cairo.Format.ARGB32.stride_for_width(icon_pixmap[0].width));
         }
 
     }
