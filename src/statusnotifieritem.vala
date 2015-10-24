@@ -135,22 +135,17 @@ namespace StatusNotifier {
             // Private methods
             //
             GLib.Variant get_dbus_property(string property_name) throws GLib.DBusError {
-                try {
-                    return StatusNotifier.DBusConnection.call_sync(
-                        bus_name,
-                        object_path,
-                        "org.freedesktop.DBus.Properties",
-                        "Get",
-                        new Variant("(ss)", INTERFACE_NAME, property_name),
-                        null,
-                        GLib.DBusCallFlags.NONE,
-                        -1,
-                        null
-                    ).get_child_value(0).get_variant();
-                } catch (GLib.DBusError error) {
-                    GLib.stderr.printf("get_dbus_property: %s\n", error.message);
-                    throw error;
-                }
+                return StatusNotifier.DBusConnection.call_sync(
+                    bus_name,
+                    object_path,
+                    "org.freedesktop.DBus.Properties",
+                    "Get",
+                    new Variant("(ss)", INTERFACE_NAME, property_name),
+                    null,
+                    GLib.DBusCallFlags.NONE,
+                    -1,
+                    null
+                ).get_child_value(0).get_variant();
             }
 
             IconPixmap[] unbox_pixmap(GLib.Variant variant) {
