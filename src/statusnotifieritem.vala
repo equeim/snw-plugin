@@ -188,7 +188,7 @@ namespace StatusNotifier {
                 return tool_tip;
             }
 
-            void subscribe_dbus_signal(string signal_name, GLib.DBusSignalCallback callback) {
+            void subscribe_dbus_signal(string signal_name, owned GLib.DBusSignalCallback callback) {
                 signal_ids += StatusNotifier.DBusConnection.signal_subscribe(
                     bus_name,
                     INTERFACE_NAME,
@@ -196,7 +196,7 @@ namespace StatusNotifier {
                     object_path,
                     null,
                     GLib.DBusSignalFlags.NONE,
-                    callback
+                    (owned) callback
                 );
             }
 
