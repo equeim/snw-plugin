@@ -187,12 +187,11 @@ namespace StatusNotifier {
                                                                        overlay_icon_size);
                     } catch (GLib.Error error) {}
 
-                    if (icon_name.length == 0) {
+                    if (icon_name.length == 0)
                         icon_pixbuf = pixbuf_from_pixmap(proxy.get_icon_pixmap());
-                    } else {
+                    else
                         icon_pixbuf = load_icon_from_theme(icon_name,
                                                            icon_size);
-                    }
 
                     if (overlay_icon_pixbuf != null) {
                         if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
