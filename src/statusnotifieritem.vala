@@ -231,7 +231,7 @@ namespace StatusNotifier {
             }
 
             private void call_dbus_method(string method_name, Variant parameters) {
-                StatusNotifier.dbus_connection.call(
+                StatusNotifier.dbus_connection.call.begin(
                     bus_name,
                     object_path,
                     INTERFACE_NAME,
