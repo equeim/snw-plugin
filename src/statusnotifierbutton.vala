@@ -43,7 +43,7 @@ namespace StatusNotifier {
 
             try {
                 proxy = new StatusNotifier.Item.Proxy(bus_name, object_path);
-            } catch (GLib.DBusError error) {}
+            } catch (DBusError error) {}
 
             try {
                 string menu_path = proxy.get_menu();
@@ -51,7 +51,7 @@ namespace StatusNotifier {
                     menu = new DbusmenuGtk.Menu(bus_name, menu_path);
                     menu.attach_to_widget(this, null);
                 }
-            } catch (GLib.DBusError error) {}
+            } catch (DBusError error) {}
 
             icon = new Gtk.Image();
             add(icon);
@@ -65,7 +65,7 @@ namespace StatusNotifier {
                     icon_theme.prepend_search_path(icon_theme_path);
                     custom_icon_theme = true;
                 }
-            } catch (GLib.DBusError error) {}
+            } catch (DBusError error) {}
  
             button_press_event.connect(button_pressed);
             button_release_event.connect(button_released);
@@ -84,8 +84,8 @@ namespace StatusNotifier {
 
             try {
                 update_status(proxy.get_status());
-            } catch (GLib.DBusError error) {
-                GLib.stderr.printf("%s\n", error.message);
+            } catch (DBusError error) {
+                stderr.printf("%s\n", error.message);
                 show();
             }
         }
@@ -190,7 +190,7 @@ namespace StatusNotifier {
                             overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
                                                                        overlay_icon_size);
                         }
-                    } catch (GLib.Error error) {}
+                    } catch (Error error) {}
 
                     if (icon_name.length == 0) {
                         icon_pixbuf = pixbuf_from_pixmap(proxy.get_icon_pixmap());
@@ -234,14 +234,14 @@ namespace StatusNotifier {
                                                       255);
                     }
                 }
-            } catch (GLib.Error error) {
+            } catch (Error error) {
                 try {
                     icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
-                } catch (GLib.Error error) {
-                    GLib.stderr.printf("%s\n", error.message);
+                } catch (Error error) {
+                    stderr.printf("%s\n", error.message);
                     return;
                 }
-                GLib.stderr.printf("%s\n", error.message);
+                stderr.printf("%s\n", error.message);
             }
 
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
@@ -286,9 +286,9 @@ namespace StatusNotifier {
             StatusNotifier.Item.ToolTip tool_tip;
             try {
                 tool_tip = proxy.get_tool_tip();
-            } catch (GLib.DBusError error) {
+            } catch (DBusError error) {
                 set_generic_tooltip();
-                GLib.stderr.printf("%s\n", error.message);
+                stderr.printf("%s\n", error.message);
                 return;
             }
 
@@ -303,7 +303,7 @@ namespace StatusNotifier {
                 try {
                     Pango.parse_markup(tooltip_tmp, -1, '\0', null, null, null);
                     tooltip_markup = tooltip_tmp;
-                } catch (GLib.Error error) {
+                } catch (Error error) {
                     tooltip_tmp = "<markup>" + tooltip_tmp + "</markup>";
                     QRichTextParser parser = new QRichTextParser(tooltip_tmp);
                     parser.translate_markup();
@@ -330,12 +330,12 @@ namespace StatusNotifier {
                 } else {
                     tooltip_markup = title;
                 }
-            } catch (GLib.DBusError error) {
+            } catch (DBusError error) {
                 tooltip_markup = proxy.id;
             }
         }
 
-        Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws GLib.Error {
+        Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws Error {
             if ((size >= 16) && (size < 22)) {
                 size = 16;
             } else if (size < 24) {

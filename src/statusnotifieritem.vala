@@ -31,7 +31,7 @@ namespace StatusNotifier {
             string description;
         }
 
-        public class Proxy : GLib.Object {
+        public class Proxy : Object {
             const string INTERFACE_NAME = "org.kde.StatusNotifierItem";
 
             string bus_name;
@@ -47,7 +47,7 @@ namespace StatusNotifier {
             public signal void new_tool_tip();
             public signal void new_status(string status);
 
-            public Proxy(string bus_name, string object_path) throws GLib.DBusError {
+            public Proxy(string bus_name, string object_path) throws DBusError {
                 this.bus_name = bus_name;
                 this.object_path = object_path;
 
@@ -69,50 +69,50 @@ namespace StatusNotifier {
             //
             // DBus properties
             //
-            public string get_title() throws GLib.DBusError {
+            public string get_title() throws DBusError {
                 return get_dbus_property("Title").get_string();
             }
 
-            public string get_status() throws GLib.DBusError {
+            public string get_status() throws DBusError {
                 return get_dbus_property("Status").get_string();
             }
 
-            public string get_icon_name() throws GLib.DBusError {
+            public string get_icon_name() throws DBusError {
                 return get_dbus_property("IconName").get_string();
             }
 
-            public IconPixmap[] get_icon_pixmap() throws GLib.DBusError {
+            public IconPixmap[] get_icon_pixmap() throws DBusError {
                 return unbox_pixmap(get_dbus_property("IconPixmap"));
             }
 
-            public string get_overlay_icon_name() throws GLib.DBusError {
+            public string get_overlay_icon_name() throws DBusError {
                 return get_dbus_property("OverlayIconName").get_string();
             }
 
-            public IconPixmap[] get_overlay_icon_pixmap() throws GLib.DBusError {
+            public IconPixmap[] get_overlay_icon_pixmap() throws DBusError {
                 return unbox_pixmap(get_dbus_property("OverlayIconPixmap"));
             }
 
-            public string get_attention_icon_name() throws GLib.DBusError {
+            public string get_attention_icon_name() throws DBusError {
                 return get_dbus_property("AttentionIconName").get_string();
             }
 
-            public IconPixmap[] get_attention_icon_pixmap() throws GLib.DBusError {
+            public IconPixmap[] get_attention_icon_pixmap() throws DBusError {
                 return unbox_pixmap(get_dbus_property("AttentionIconPixmap"));
             }
 
-            public ToolTip get_tool_tip() throws GLib.DBusError {
+            public ToolTip get_tool_tip() throws DBusError {
                 return unbox_tool_tip(get_dbus_property("ToolTip"));
             }
 
             //
             // Not in specification
             //
-            public string get_icon_theme_path() throws GLib.DBusError {
+            public string get_icon_theme_path() throws DBusError {
                 return get_dbus_property("IconThemePath").get_string();
             }
 
-            public string get_menu() throws GLib.DBusError {
+            public string get_menu() throws DBusError {
                 return get_dbus_property("Menu").get_string();
             }
 
@@ -120,21 +120,21 @@ namespace StatusNotifier {
             // DBus methods
             //
             public void activate(int x, int y) {
-                call_dbus_method("Activate", new GLib.Variant("(ii)", x, y));
+                call_dbus_method("Activate", new Variant("(ii)", x, y));
             }
 
             public void secondary_activate(int x, int y) {
-                call_dbus_method("SecondaryActivate", new GLib.Variant("(ii)", x, y));
+                call_dbus_method("SecondaryActivate", new Variant("(ii)", x, y));
             }
 
             public void scroll(int delta, string orientation) {
-                call_dbus_method("Scroll", new GLib.Variant("(is)", delta, orientation));
+                call_dbus_method("Scroll", new Variant("(is)", delta, orientation));
             }
 
             //
             // Private methods
             //
-            GLib.Variant get_dbus_property(string property_name) throws GLib.DBusError {
+            Variant get_dbus_property(string property_name) throws DBusError {
                 return StatusNotifier.DBusConnection.call_sync(
                     bus_name,
                     object_path,
@@ -142,26 +142,26 @@ namespace StatusNotifier {
                     "Get",
                     new Variant("(ss)", INTERFACE_NAME, property_name),
                     null,
-                    GLib.DBusCallFlags.NONE,
+                    DBusCallFlags.NONE,
                     -1,
                     null
                 ).get_child_value(0).get_variant();
             }
 
-            IconPixmap[] unbox_pixmap(GLib.Variant variant) {
+            IconPixmap[] unbox_pixmap(Variant variant) {
                 IconPixmap[] pixmap = {};
 
-                GLib.VariantIter pixmap_iterator = variant.iterator();
-                GLib.Variant pixmap_variant = pixmap_iterator.next_value();
+                VariantIter pixmap_iterator = variant.iterator();
+                Variant pixmap_variant = pixmap_iterator.next_value();
                 while (pixmap_variant != null) {
                     IconPixmap pixmap_struct = IconPixmap();
 
                     pixmap_variant.get_child(0, "i", &pixmap_struct.width);
                     pixmap_variant.get_child(1, "i", &pixmap_struct.height);
 
-                    GLib.Variant bytes_variant = pixmap_variant.get_child_value(2);
+                    Variant bytes_variant = pixmap_variant.get_child_value(2);
                     uint8[] bytes = {};
-                    GLib.VariantIter bytes_iterator = bytes_variant.iterator();
+                    VariantIter bytes_iterator = bytes_variant.iterator();
                     uint8 byte = 0;
                     while (bytes_iterator.next("y", &byte)) {
                         bytes += byte;
@@ -176,7 +176,7 @@ namespace StatusNotifier {
                 return pixmap;
             }
 
-            ToolTip unbox_tool_tip(GLib.Variant variant) {
+            ToolTip unbox_tool_tip(Variant variant) {
                 ToolTip tool_tip = ToolTip();
 
                 variant.get_child(0, "s", &tool_tip.icon_name);
@@ -189,14 +189,14 @@ namespace StatusNotifier {
                 return tool_tip;
             }
 
-            void subscribe_dbus_signal(string signal_name, owned GLib.DBusSignalCallback callback) {
+            void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
                 signal_ids += StatusNotifier.DBusConnection.signal_subscribe(
                     bus_name,
                     INTERFACE_NAME,
                     signal_name,
                     object_path,
                     null,
-                    GLib.DBusSignalFlags.NONE,
+                    DBusSignalFlags.NONE,
                     (owned) callback
                 );
             }
@@ -221,16 +221,16 @@ namespace StatusNotifier {
                 new_tool_tip();
             }
 
-            void new_status_callback(GLib.DBusConnection connection,
+            void new_status_callback(DBusConnection connection,
                                      string bus_name,
                                      string object_path,
                                      string interface_name,
                                      string signal_name,
-                                     GLib.Variant parameters) {
+                                     Variant parameters) {
                 new_status(parameters.get_child_value(0).get_string());
             }
 
-            void call_dbus_method(string method_name, GLib.Variant parameters) {
+            void call_dbus_method(string method_name, Variant parameters) {
                 StatusNotifier.DBusConnection.call(
                     bus_name,
                     object_path,
@@ -238,7 +238,7 @@ namespace StatusNotifier {
                     method_name,
                     parameters,
                     null,
-                    GLib.DBusCallFlags.NONE,
+                    DBusCallFlags.NONE,
                     -1,
                     null
                 );

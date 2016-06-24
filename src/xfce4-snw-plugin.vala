@@ -18,14 +18,14 @@
 
 
 namespace StatusNotifier {
-    GLib.DBusConnection DBusConnection;
+    DBusConnection DBusConnection;
 
     public class Plugin : Xfce.PanelPlugin {
         public override void @construct() {
             try {
-                DBusConnection = GLib.Bus.get_sync(GLib.BusType.SESSION, null);
-            } catch (GLib.IOError error) {
-                GLib.stderr.printf("%s\n", error.message);
+                DBusConnection = Bus.get_sync(BusType.SESSION, null);
+            } catch (IOError error) {
+                stderr.printf("%s\n", error.message);
             }
 
             StatusNotifier.Widget widget = new StatusNotifier.Widget(this);

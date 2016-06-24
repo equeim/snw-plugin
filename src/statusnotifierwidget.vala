@@ -20,14 +20,14 @@ namespace StatusNotifier {
     public class Widget : Gtk.Box {
         Xfce.PanelPlugin plugin;
         StatusNotifier.Watcher watcher;
-        GLib.Array<StatusNotifier.Button> buttons;
+        Array<StatusNotifier.Button> buttons;
         Gtk.DrawingArea handle;
 
         public Widget(Xfce.PanelPlugin plugin) {
             this.plugin = plugin;
 
             watcher = new StatusNotifier.Watcher();
-            buttons = new GLib.Array<StatusNotifier.Button>();
+            buttons = new Array<StatusNotifier.Button>();
 
             Gtk.rc_parse_string("""
                                 style "button-style"
