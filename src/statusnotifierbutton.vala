@@ -321,6 +321,20 @@ namespace StatusNotifier {
         }
 
         Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws GLib.Error {
+            if ((size >= 16) && (size < 22)) {
+                size = 16;
+            } else if (size < 24) {
+                size = 22;
+            } else if (size < 32) {
+                size = 24;
+            } else if (size < 48) {
+                size = 32;
+            } else if (size < 64) {
+                size = 48;
+            } else if (size < 96) {
+                size = 96;
+            }
+
             Gdk.Pixbuf icon_pixbuf = icon_theme.load_icon(icon_name, size, 0);
 
             if (icon_pixbuf.width > icon_pixbuf.height &&
