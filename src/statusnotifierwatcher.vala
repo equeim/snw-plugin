@@ -26,9 +26,9 @@ namespace StatusNotifier {
     public class Watcher : Object {
         public WatcherConnector connector;
 
-        Array<string> _registered_status_notifier_items;
-        Array<string> object_paths;
-        Array<uint> watcher_ids;
+        private Array<string> _registered_status_notifier_items;
+        private Array<string> object_paths;
+        private Array<uint> watcher_ids;
 
         public Watcher() {
             connector = new WatcherConnector();
@@ -106,7 +106,7 @@ namespace StatusNotifier {
         //
         // Private Methods
         //
-        void on_name_acquired() {
+        private void on_name_acquired() {
             try {
                 StatusNotifier.DBusConnection.register_object("/StatusNotifierWatcher", this);
             } catch (IOError e) {
@@ -114,11 +114,11 @@ namespace StatusNotifier {
             }
         }
 
-        void on_name_lost() {
+        private void on_name_lost() {
             stderr.printf("Could not acquire name");
         }
 
-        void remove_item(DBusConnection? connection, string bus_name) {
+        private void remove_item(DBusConnection? connection, string bus_name) {
             for (int i = 0; i < _registered_status_notifier_items.length; i++) {
                 if (_registered_status_notifier_items.index(i) == bus_name) {
                     Bus.unwatch_name(watcher_ids.index(i));

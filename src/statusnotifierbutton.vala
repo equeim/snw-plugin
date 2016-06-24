@@ -22,18 +22,18 @@ namespace StatusNotifier {
     }
 
     public class Button : Gtk.Button {
-        Xfce.PanelPlugin plugin;
+        private Xfce.PanelPlugin plugin;
 
-        StatusNotifier.Item.Proxy proxy;
+        private StatusNotifier.Item.Proxy proxy;
 
-        DbusmenuGtk.Menu menu;
+        private DbusmenuGtk.Menu menu;
 
-        Gtk.Image icon;
-        Gtk.IconTheme icon_theme;
-        bool custom_icon_theme;
+        private Gtk.Image icon;
+        private Gtk.IconTheme icon_theme;
+        private bool custom_icon_theme;
 
-        string tooltip_icon_name;
-        Gdk.Pixbuf tooltip_icon_pixbuf;
+        private string tooltip_icon_name;
+        private Gdk.Pixbuf tooltip_icon_pixbuf;
 
         public Button(string bus_name, string object_path, Xfce.PanelPlugin plugin) {
             this.plugin = plugin;
@@ -94,7 +94,7 @@ namespace StatusNotifier {
             update_icon();
         }
 
-        bool button_pressed(Gdk.EventButton event) {
+        private bool button_pressed(Gdk.EventButton event) {
             if (event.button == 3) {
                 if (menu != null) {
                     if (menu.get_children().length() != 0)
@@ -115,7 +115,7 @@ namespace StatusNotifier {
             return false;
         }
 
-        bool button_released(Gdk.EventButton event) {
+        private bool button_released(Gdk.EventButton event) {
             if (event.button == 1) {
                 proxy.activate((int) event.x_root, (int) event.y_root);
             } else if (event.button == 2) {
@@ -124,7 +124,7 @@ namespace StatusNotifier {
             return false;
         }
 
-        bool wheel_rotated(Gdk.EventScroll event) {
+        private bool wheel_rotated(Gdk.EventScroll event) {
             switch (event.direction) {
                 case Gdk.ScrollDirection.LEFT:
                     proxy.scroll(-120, "horizontal");
@@ -142,7 +142,7 @@ namespace StatusNotifier {
             return false;
         }
 
-        bool tooltip_requested(int x, int y, bool keyboard, Gtk.Tooltip tooltip) {
+        private bool tooltip_requested(int x, int y, bool keyboard, Gtk.Tooltip tooltip) {
             tooltip.set_markup(tooltip_markup);
 
             if (tooltip_icon_name == null) {
@@ -156,7 +156,7 @@ namespace StatusNotifier {
             return true;
         }
 
-        void update_icon() {
+        private void update_icon() {
             int icon_size = plugin.size - 2;
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
                 icon_size -= 2 * style.ythickness;
@@ -275,14 +275,14 @@ namespace StatusNotifier {
             icon.set_from_pixbuf(icon_pixbuf);
         }
 
-        void update_status(string status) {
+        private void update_status(string status) {
             if (status == "Passive") {
                 hide();
             }
             show();
         }
 
-        void update_tooltip() {
+        private void update_tooltip() {
             StatusNotifier.Item.ToolTip tool_tip;
             try {
                 tool_tip = proxy.get_tool_tip();
@@ -320,7 +320,7 @@ namespace StatusNotifier {
             }
         }
 
-        void set_generic_tooltip() {
+        private void set_generic_tooltip() {
             tooltip_icon_name = null;
             tooltip_icon_pixbuf = null;
             try {
@@ -335,7 +335,7 @@ namespace StatusNotifier {
             }
         }
 
-        Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws Error {
+        private Gdk.Pixbuf load_icon_from_theme(string icon_name, int size) throws Error {
             if ((size >= 16) && (size < 22)) {
                 size = 16;
             } else if (size < 24) {
@@ -367,7 +367,7 @@ namespace StatusNotifier {
             return icon_pixbuf;
         }
 
-        Gdk.Pixbuf pixbuf_from_pixmap(StatusNotifier.Item.IconPixmap[] icon_pixmap) throws PixmapError {
+        private Gdk.Pixbuf pixbuf_from_pixmap(StatusNotifier.Item.IconPixmap[] icon_pixmap) throws PixmapError {
             if (icon_pixmap.length == 0) {
                 throw new PixmapError.ERROR("No pixmaps");
             }

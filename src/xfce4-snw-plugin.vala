@@ -18,7 +18,7 @@
 
 
 namespace StatusNotifier {
-    DBusConnection DBusConnection;
+    private DBusConnection DBusConnection;
 
     public class Plugin : Xfce.PanelPlugin {
         public override void @construct() {

@@ -18,10 +18,10 @@
 
 namespace StatusNotifier {
     public class Widget : Gtk.Box {
-        Xfce.PanelPlugin plugin;
-        StatusNotifier.Watcher watcher;
-        Array<StatusNotifier.Button> buttons;
-        Gtk.DrawingArea handle;
+        private Xfce.PanelPlugin plugin;
+        private StatusNotifier.Watcher watcher;
+        private Array<StatusNotifier.Button> buttons;
+        private Gtk.DrawingArea handle;
 
         public Widget(Xfce.PanelPlugin plugin) {
             this.plugin = plugin;
@@ -51,18 +51,18 @@ namespace StatusNotifier {
             watcher.connector.item_removed.connect(remove_button);
         }
 
-        void add_button(string bus_name, string object_path) {
+        private void add_button(string bus_name, string object_path) {
             StatusNotifier.Button button = new StatusNotifier.Button(bus_name, object_path, plugin);
             buttons.append_val(button);
             pack_start(button);
         }
 
-        void remove_button(int index) {
+        private void remove_button(int index) {
             remove(buttons.index(index));
             buttons.remove_index(index);
         }
 
-        bool change_size(int size) {
+        private bool change_size(int size) {
             if (orientation == Gtk.Orientation.HORIZONTAL) {
                     handle.set_size_request(8, size);
             } else {
@@ -76,12 +76,12 @@ namespace StatusNotifier {
             return true;
         }
 
-        void change_orientation(Gtk.Orientation new_orientation) {
+        private void change_orientation(Gtk.Orientation new_orientation) {
             orientation = new_orientation;
             change_size(plugin.size);
         }
 
-        bool draw_handle(Gdk.EventExpose event) {
+        private bool draw_handle(Gdk.EventExpose event) {
             Gtk.paint_handle(handle.style,
                                 handle.window,
                                 handle.get_state(),
@@ -97,7 +97,7 @@ namespace StatusNotifier {
             return false;
         }
 
-        Gtk.Orientation get_handle_orientation() {
+        private Gtk.Orientation get_handle_orientation() {
             if (orientation == Gtk.Orientation.HORIZONTAL) {
                 return Gtk.Orientation.VERTICAL;
             }

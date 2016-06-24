@@ -34,9 +34,9 @@ namespace StatusNotifier {
         public class Proxy : Object {
             const string INTERFACE_NAME = "org.kde.StatusNotifierItem";
 
-            string bus_name;
-            string object_path;
-            uint[] signal_ids;
+            private string bus_name;
+            private string object_path;
+            private uint[] signal_ids;
 
             public string id { get; private set; }
 
@@ -134,7 +134,7 @@ namespace StatusNotifier {
             //
             // Private methods
             //
-            Variant get_dbus_property(string property_name) throws DBusError {
+            private Variant get_dbus_property(string property_name) throws DBusError {
                 return StatusNotifier.DBusConnection.call_sync(
                     bus_name,
                     object_path,
@@ -148,7 +148,7 @@ namespace StatusNotifier {
                 ).get_child_value(0).get_variant();
             }
 
-            IconPixmap[] unbox_pixmap(Variant variant) {
+            private IconPixmap[] unbox_pixmap(Variant variant) {
                 IconPixmap[] pixmap = {};
 
                 VariantIter pixmap_iterator = variant.iterator();
@@ -176,7 +176,7 @@ namespace StatusNotifier {
                 return pixmap;
             }
 
-            ToolTip unbox_tool_tip(Variant variant) {
+            private ToolTip unbox_tool_tip(Variant variant) {
                 ToolTip tool_tip = ToolTip();
 
                 variant.get_child(0, "s", &tool_tip.icon_name);
@@ -189,7 +189,7 @@ namespace StatusNotifier {
                 return tool_tip;
             }
 
-            void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
+            private void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
                 signal_ids += StatusNotifier.DBusConnection.signal_subscribe(
                     bus_name,
                     INTERFACE_NAME,
@@ -201,27 +201,27 @@ namespace StatusNotifier {
                 );
             }
 
-            void new_title_callback() {
+            private void new_title_callback() {
                 new_title();
             }
 
-            void new_icon_callback() {
+            private void new_icon_callback() {
                 new_icon();
             }
 
-            void new_overlay_icon_callback() {
+            private void new_overlay_icon_callback() {
                 new_overlay_icon();
             }
 
-            void new_attention_icon_callback() {
+            private void new_attention_icon_callback() {
                 new_attention_icon();
             }
 
-            void new_tool_tip_callback() {
+            private void new_tool_tip_callback() {
                 new_tool_tip();
             }
 
-            void new_status_callback(DBusConnection connection,
+            private void new_status_callback(DBusConnection connection,
                                      string bus_name,
                                      string object_path,
                                      string interface_name,
@@ -230,7 +230,7 @@ namespace StatusNotifier {
                 new_status(parameters.get_child_value(0).get_string());
             }
 
-            void call_dbus_method(string method_name, Variant parameters) {
+            private void call_dbus_method(string method_name, Variant parameters) {
                 StatusNotifier.DBusConnection.call(
                     bus_name,
                     object_path,
