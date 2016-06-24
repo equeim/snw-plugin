@@ -63,13 +63,15 @@ namespace StatusNotifier {
         }
 
         bool change_size(int size) {
-            if (orientation == Gtk.Orientation.HORIZONTAL)
+            if (orientation == Gtk.Orientation.HORIZONTAL) {
                     handle.set_size_request(8, size);
-            else
+            } else {
                     handle.set_size_request(size, 8);
+            }
 
-            foreach (StatusNotifier.Button button in buttons.data)
+            foreach (StatusNotifier.Button button in buttons.data) {
                 button.change_size(size);
+            }
 
             return true;
         }
@@ -96,8 +98,9 @@ namespace StatusNotifier {
         }
 
         Gtk.Orientation get_handle_orientation() {
-            if (orientation == Gtk.Orientation.HORIZONTAL)
+            if (orientation == Gtk.Orientation.HORIZONTAL) {
                 return Gtk.Orientation.VERTICAL;
+            }
             return Gtk.Orientation.HORIZONTAL;
         }
     }

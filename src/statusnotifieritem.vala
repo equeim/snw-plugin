@@ -163,8 +163,9 @@ namespace StatusNotifier {
                     uint8[] bytes = {};
                     GLib.VariantIter bytes_iterator = bytes_variant.iterator();
                     uint8 byte = 0;
-                    while (bytes_iterator.next("y", &byte))
+                    while (bytes_iterator.next("y", &byte)) {
                         bytes += byte;
+                    }
                     pixmap_struct.bytes = (owned) bytes;
 
                     pixmap += (owned) pixmap_struct;
