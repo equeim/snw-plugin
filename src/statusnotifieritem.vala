@@ -63,7 +63,7 @@ namespace StatusNotifier {
 
             ~Proxy() {
                 foreach (uint id in signal_ids)
-                    StatusNotifier.DBusConnection.signal_unsubscribe(id);
+                    StatusNotifier.dbus_connection.signal_unsubscribe(id);
             }
 
             //
@@ -135,7 +135,7 @@ namespace StatusNotifier {
             // Private methods
             //
             private Variant get_dbus_property(string property_name) throws DBusError {
-                return StatusNotifier.DBusConnection.call_sync(
+                return StatusNotifier.dbus_connection.call_sync(
                     bus_name,
                     object_path,
                     "org.freedesktop.DBus.Properties",
@@ -190,7 +190,7 @@ namespace StatusNotifier {
             }
 
             private void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
-                signal_ids += StatusNotifier.DBusConnection.signal_subscribe(
+                signal_ids += StatusNotifier.dbus_connection.signal_subscribe(
                     bus_name,
                     INTERFACE_NAME,
                     signal_name,
@@ -231,7 +231,7 @@ namespace StatusNotifier {
             }
 
             private void call_dbus_method(string method_name, Variant parameters) {
-                StatusNotifier.DBusConnection.call(
+                StatusNotifier.dbus_connection.call(
                     bus_name,
                     object_path,
                     INTERFACE_NAME,

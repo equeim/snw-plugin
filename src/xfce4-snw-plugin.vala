@@ -18,12 +18,12 @@
 
 
 namespace StatusNotifier {
-    private DBusConnection DBusConnection;
+    private DBusConnection dbus_connection;
 
     public class Plugin : Xfce.PanelPlugin {
         public override void @construct() {
             try {
-                DBusConnection = Bus.get_sync(BusType.SESSION, null);
+                dbus_connection = Bus.get_sync(BusType.SESSION, null);
             } catch (IOError error) {
                 stderr.printf("%s\n", error.message);
             }

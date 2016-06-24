@@ -37,7 +37,7 @@ namespace StatusNotifier {
             object_paths = new Array<string>();
             watcher_ids = new Array<uint>();
 
-            Bus.own_name_on_connection(StatusNotifier.DBusConnection,
+            Bus.own_name_on_connection(StatusNotifier.dbus_connection,
                                             "org.kde.StatusNotifierWatcher",
                                             BusNameOwnerFlags.NONE,
                                             on_name_acquired,
@@ -108,7 +108,7 @@ namespace StatusNotifier {
         //
         private void on_name_acquired() {
             try {
-                StatusNotifier.DBusConnection.register_object("/StatusNotifierWatcher", this);
+                StatusNotifier.dbus_connection.register_object("/StatusNotifierWatcher", this);
             } catch (IOError e) {
                 stderr.printf("Could not register service\n");
             }
