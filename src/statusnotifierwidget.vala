@@ -20,7 +20,7 @@ namespace StatusNotifier {
     private class Widget : Gtk.Box {
         private Plugin plugin;
         private Watcher watcher;
-        private GenericArray<StatusNotifier.Button> buttons;
+        private GenericArray<Button> buttons;
         private Gtk.DrawingArea handle;
 
         public Widget(Plugin plugin) {
