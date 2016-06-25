@@ -20,8 +20,8 @@ namespace StatusNotifier {
     private class WatcherBase : Object {
         protected DBusConnection dbus_connection;
 
-        protected Array<string> _registered_status_notifier_items;
-        protected Array<string> object_paths;
+        protected GenericArray<string> _registered_status_notifier_items;
+        protected GenericArray<string> object_paths;
         protected Array<uint> watcher_ids;
 
         public signal void item_added(string bus_name, string object_path);
@@ -30,14 +30,14 @@ namespace StatusNotifier {
         public WatcherBase(DBusConnection connection) {
             dbus_connection = connection;
 
-            _registered_status_notifier_items = new Array<string>();
-            object_paths = new Array<string>();
+            _registered_status_notifier_items = new GenericArray<string>();
+            object_paths = new GenericArray<string>();
             watcher_ids = new Array<uint>();
         }
 
         public void remove_item(string bus_name) {
             for (int i = 0; i < _registered_status_notifier_items.length; i++) {
-                if (_registered_status_notifier_items.index(i) == bus_name) {
+                if (_registered_status_notifier_items.data[i] == bus_name) {
                     Bus.unwatch_name(watcher_ids.index(i));
                     watcher_ids.remove_index(i);
                     _registered_status_notifier_items.remove_index(i);
@@ -96,8 +96,8 @@ namespace StatusNotifier {
                 }
             }
 
-            _registered_status_notifier_items.append_val(bus_name);
-            object_paths.append_val(object_path);
+            _registered_status_notifier_items.add(bus_name);
+            object_paths.add(object_path);
 
             watcher_ids.append_val(Bus.watch_name(BusType.SESSION,
                                                   bus_name,
