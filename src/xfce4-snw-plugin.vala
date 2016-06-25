@@ -18,9 +18,9 @@
 
 
 namespace StatusNotifier {
-    private DBusConnection dbus_connection;
+    private class Plugin : Xfce.PanelPlugin {
+        public DBusConnection dbus_connection;
 
-    public class Plugin : Xfce.PanelPlugin {
         public override void @construct() {
             try {
                 dbus_connection = Bus.get_sync(BusType.SESSION, null);
@@ -28,7 +28,7 @@ namespace StatusNotifier {
                 stderr.printf("%s\n", error.message);
             }
 
-            StatusNotifier.Widget widget = new StatusNotifier.Widget(this);
+            var widget = new Widget(this);
             add(widget);
             add_action_widget(widget);
             widget.show_all();

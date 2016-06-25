@@ -17,14 +17,14 @@
  */
 
 namespace StatusNotifier {
-    public errordomain PixmapError {
+    private errordomain PixmapError {
         ERROR
     }
 
-    public class Button : Gtk.Button {
-        private Xfce.PanelPlugin plugin;
+    private class Button : Gtk.Button {
+        private Plugin plugin;
 
-        private StatusNotifier.Item.Proxy proxy;
+        private ItemProxy proxy;
 
         private DbusmenuGtk.Menu menu;
 
@@ -35,15 +35,13 @@ namespace StatusNotifier {
         private string tooltip_icon_name;
         private Gdk.Pixbuf tooltip_icon_pixbuf;
 
-        public Button(string bus_name, string object_path, Xfce.PanelPlugin plugin) {
+        public Button(string bus_name, string object_path, Plugin plugin) throws Error {
             this.plugin = plugin;
 
             set_relief(Gtk.ReliefStyle.NONE);
             set_size_request(plugin.size, plugin.size);
 
-            try {
-                proxy = new StatusNotifier.Item.Proxy(bus_name, object_path);
-            } catch (DBusError error) {}
+            proxy = new ItemProxy(plugin.dbus_connection, bus_name, object_path);
 
             try {
                 string menu_path = proxy.get_menu();
@@ -51,7 +49,7 @@ namespace StatusNotifier {
                     menu = new DbusmenuGtk.Menu(bus_name, menu_path);
                     menu.attach_to_widget(this, null);
                 }
-            } catch (DBusError error) {}
+            } catch { }
 
             icon = new Gtk.Image();
             add(icon);
@@ -65,7 +63,7 @@ namespace StatusNotifier {
                     icon_theme.prepend_search_path(icon_theme_path);
                     custom_icon_theme = true;
                 }
-            } catch (DBusError error) {}
+            } catch { }
  
             button_press_event.connect(button_pressed);
             button_release_event.connect(button_released);
@@ -76,18 +74,16 @@ namespace StatusNotifier {
             proxy.new_icon.connect(update_icon);
             proxy.new_attention_icon.connect(update_icon);
             proxy.new_overlay_icon.connect(update_icon);
-            proxy.new_tool_tip.connect(update_tooltip);
+            proxy.new_tooltip.connect(update_tooltip);
             proxy.new_status.connect(update_status);
 
             update_icon();
             update_tooltip();
+            update_status(proxy.get_status());
+        }
 
-            try {
-                update_status(proxy.get_status());
-            } catch (DBusError error) {
-                stderr.printf("%s\n", error.message);
-                show();
-            }
+        ~Button() {
+            proxy.unsubscribe_signals();
         }
 
         public void change_size(int size) {
@@ -159,9 +155,9 @@ namespace StatusNotifier {
         private void update_icon() {
             int icon_size = plugin.size - 2;
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                icon_size -= 2 * style.ythickness;
+                icon_size -= style.ythickness * 2;
             } else {
-                icon_size -= 2 * style.xthickness;
+                icon_size -= style.xthickness * 2;
             }
 
             int overlay_icon_size = icon_size / 2;
@@ -173,27 +169,28 @@ namespace StatusNotifier {
                 if (proxy.get_status() == "NeedsAttention") {
                     string attention_icon_name = proxy.get_attention_icon_name();
                     if (attention_icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmap(proxy.get_attention_icon_pixmap());
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_attention_icon_pixmaps());
                     } else {
                         icon_pixbuf = load_icon_from_theme(attention_icon_name,
                                                            icon_size);
                     }
                 } else {
                     string icon_name = proxy.get_icon_name();
+                    print("%s\n", icon_name);
 
                     Gdk.Pixbuf overlay_icon_pixbuf = null;
                     try {
                         string overlay_icon_name = proxy.get_overlay_icon_name();
                         if (overlay_icon_name.length == 0) {
-                            overlay_icon_pixbuf = pixbuf_from_pixmap(proxy.get_overlay_icon_pixmap());
+                            overlay_icon_pixbuf = pixbuf_from_pixmaps(proxy.get_overlay_icon_pixmaps());
                         } else {
                             overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
                                                                        overlay_icon_size);
                         }
-                    } catch (Error error) {}
+                    } catch { }
 
                     if (icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmap(proxy.get_icon_pixmap());
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_icon_pixmaps());
                     } else {
                         icon_pixbuf = load_icon_from_theme(icon_name,
                                                            icon_size);
@@ -235,13 +232,14 @@ namespace StatusNotifier {
                     }
                 }
             } catch (Error error) {
+                stderr.printf("666 %s\n", error.message);
                 try {
                     icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
+                    print("123\n");
                 } catch (Error error) {
                     stderr.printf("%s\n", error.message);
                     return;
                 }
-                stderr.printf("%s\n", error.message);
             }
 
             if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
@@ -278,45 +276,47 @@ namespace StatusNotifier {
         private void update_status(string status) {
             if (status == "Passive") {
                 hide();
+            } else {
+                show();
             }
-            show();
         }
 
         private void update_tooltip() {
-            StatusNotifier.Item.ToolTip tool_tip;
+            ToolTip tooltip;
             try {
-                tool_tip = proxy.get_tool_tip();
-            } catch (DBusError error) {
+                tooltip = proxy.get_tooltip();
+            } catch (Error error) {
                 set_generic_tooltip();
                 stderr.printf("%s\n", error.message);
                 return;
             }
 
-            if (tool_tip.title.length == 0) {
+            if (tooltip.title.length == 0) {
                 set_generic_tooltip();
             } else {
-                string tooltip_tmp = tool_tip.title;
-                if (tool_tip.description.length != 0) {
-                    tooltip_tmp += "<br>" + tool_tip.description;
+                string tooltip_string = tooltip.title;
+                if (tooltip.description.length != 0) {
+                    tooltip_string += "<br>";
+                    tooltip_string += tooltip.description;
                 }
 
                 try {
-                    Pango.parse_markup(tooltip_tmp, -1, '\0', null, null, null);
-                    tooltip_markup = tooltip_tmp;
-                } catch (Error error) {
-                    tooltip_tmp = "<markup>" + tooltip_tmp + "</markup>";
-                    QRichTextParser parser = new QRichTextParser(tooltip_tmp);
+                    Pango.parse_markup(tooltip_string, -1, '\0', null, null, null);
+                    tooltip_markup = tooltip_string;
+                } catch {
+                    tooltip_string = "<markup>" + tooltip_string + "</markup>";
+                    var parser = new QRichTextParser(tooltip_string);
                     parser.translate_markup();
                     tooltip_markup = parser.pango_markup;
                 }
             }
 
-            if (tool_tip.icon_name.length == 0) {
+            if (tooltip.icon_name.length == 0) {
                 try {
-                    tooltip_icon_pixbuf = pixbuf_from_pixmap(tool_tip.icon_pixmap);
-                } catch (PixmapError error) {}
+                    tooltip_icon_pixbuf = pixbuf_from_pixmaps(tooltip.icon_pixmaps);
+                } catch (PixmapError error) { }
             } else {
-                tooltip_icon_name = tool_tip.icon_name;
+                tooltip_icon_name = tooltip.icon_name;
             }
         }
 
@@ -330,7 +330,7 @@ namespace StatusNotifier {
                 } else {
                     tooltip_markup = title;
                 }
-            } catch (DBusError error) {
+            } catch {
                 tooltip_markup = proxy.id;
             }
         }
@@ -367,23 +367,23 @@ namespace StatusNotifier {
             return icon_pixbuf;
         }
 
-        private Gdk.Pixbuf pixbuf_from_pixmap(StatusNotifier.Item.IconPixmap[] icon_pixmap) throws PixmapError {
-            if (icon_pixmap.length == 0) {
+        private Gdk.Pixbuf pixbuf_from_pixmaps(IconPixmap[] icon_pixmaps) throws PixmapError {
+            if (icon_pixmaps.length == 0) {
                 throw new PixmapError.ERROR("No pixmaps");
             }
 
-            if (icon_pixmap[0].bytes.length == 0) {
+            if (icon_pixmaps[0].bytes.length == 0) {
                 throw new PixmapError.ERROR("First pixmap is empty");
             }
 
-            uint[] new_bytes = (uint[]) icon_pixmap[0].bytes;
+            var new_bytes = (uint[]) icon_pixmaps[0].bytes;
             for (int i = 0; i < new_bytes.length; i++) {
                 new_bytes[i] = new_bytes[i].to_big_endian();
             }
 
-            uint8[] new_bytes8 = (uint8[]) new_bytes;
+            var new_bytes8 = (uint8[]) new_bytes;
             for (int i = 0; i < new_bytes8.length; i = i + 4) {
-                uint8 red = new_bytes8[i];
+                var red = new_bytes8[i];
                 new_bytes8[i] = new_bytes8[i + 2];
                 new_bytes8[i + 2] = red;
             }
@@ -392,9 +392,9 @@ namespace StatusNotifier {
                                             Gdk.Colorspace.RGB,
                                             true,
                                             8,
-                                            icon_pixmap[0].width,
-                                            icon_pixmap[0].height,
-                                            Cairo.Format.ARGB32.stride_for_width(icon_pixmap[0].width));
+                                            icon_pixmaps[0].width,
+                                            icon_pixmaps[0].height,
+                                            Cairo.Format.ARGB32.stride_for_width(icon_pixmaps[0].width));
         }
 
     }

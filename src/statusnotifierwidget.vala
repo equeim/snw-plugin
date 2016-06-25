@@ -17,17 +17,17 @@
  */
 
 namespace StatusNotifier {
-    public class Widget : Gtk.Box {
-        private Xfce.PanelPlugin plugin;
-        private StatusNotifier.Watcher watcher;
-        private Array<StatusNotifier.Button> buttons;
+    private class Widget : Gtk.Box {
+        private Plugin plugin;
+        private Watcher watcher;
+        private GenericArray<StatusNotifier.Button> buttons;
         private Gtk.DrawingArea handle;
 
-        public Widget(Xfce.PanelPlugin plugin) {
+        public Widget(Plugin plugin) {
             this.plugin = plugin;
 
-            watcher = new StatusNotifier.Watcher();
-            buttons = new Array<StatusNotifier.Button>();
+            watcher = new Watcher(plugin.dbus_connection);
+            buttons = new GenericArray<Button>();
 
             Gtk.rc_parse_string("""
                                 style "button-style"
@@ -47,29 +47,33 @@ namespace StatusNotifier {
             plugin.size_changed.connect(change_size);
             plugin.orientation_changed.connect(change_orientation);
 
-            watcher.connector.item_added.connect(add_button);
-            watcher.connector.item_removed.connect(remove_button);
+            watcher.item_added.connect(add_button);
+            watcher.item_removed.connect(remove_button);
         }
 
         private void add_button(string bus_name, string object_path) {
-            StatusNotifier.Button button = new StatusNotifier.Button(bus_name, object_path, plugin);
-            buttons.append_val(button);
-            pack_start(button);
+            try {
+                var button = new Button(bus_name, object_path, plugin);
+                buttons.add(button);
+                pack_start(button);
+            } catch {
+                watcher.remove_item(bus_name);
+            }
         }
 
         private void remove_button(int index) {
-            remove(buttons.index(index));
+            remove(buttons.data[index]);
             buttons.remove_index(index);
         }
 
         private bool change_size(int size) {
             if (orientation == Gtk.Orientation.HORIZONTAL) {
-                    handle.set_size_request(8, size);
+                handle.set_size_request(8, size);
             } else {
-                    handle.set_size_request(size, 8);
+                handle.set_size_request(size, 8);
             }
 
-            foreach (StatusNotifier.Button button in buttons.data) {
+            foreach (var button in buttons.data) {
                 button.change_size(size);
             }
 
@@ -83,25 +87,19 @@ namespace StatusNotifier {
 
         private bool draw_handle(Gdk.EventExpose event) {
             Gtk.paint_handle(handle.style,
-                                handle.window,
-                                handle.get_state(),
-                                Gtk.ShadowType.NONE,
-                                handle.allocation,
-                                handle,
-                                null,
-                                0,
-                                0,
-                                handle.allocation.width,
-                                handle.allocation.height,
-                                get_handle_orientation());
+                             handle.window,
+                             handle.get_state(),
+                             Gtk.ShadowType.NONE,
+                             handle.allocation,
+                             handle,
+                             null,
+                             0,
+                             0,
+                             handle.allocation.width,
+                             handle.allocation.height,
+                             (orientation == Gtk.Orientation.HORIZONTAL) ? Gtk.Orientation.VERTICAL
+                                                                         : Gtk.Orientation.HORIZONTAL);
             return false;
-        }
-
-        private Gtk.Orientation get_handle_orientation() {
-            if (orientation == Gtk.Orientation.HORIZONTAL) {
-                return Gtk.Orientation.VERTICAL;
-            }
-            return Gtk.Orientation.HORIZONTAL;
         }
     }
 }
