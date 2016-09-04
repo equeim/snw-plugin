@@ -1,8 +1,0 @@
-[Xfce Panel]
-Type=X-XFCE-PanelPlugin
-_Name=SNI Notification area
-_Comment=Area where StatusNotifierItem's appear
-Icon=applications-system
-X-XFCE-Module=snw
-X-XFCE-Unique=true
-X-XFCE-API=1.0

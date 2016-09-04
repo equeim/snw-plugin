@@ -1,7 +1,7 @@
 using GLib;
 
 [Compact]
-public class QRichTextParser
+private class QRichTextParser
 {
     internal enum ListType
     {

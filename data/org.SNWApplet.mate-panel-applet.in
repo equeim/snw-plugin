@@ -1,0 +1,11 @@
+[Applet Factory]
+Id=SNWAppletFactory
+Location=@LOCATION@
+Name=SNW applet factory
+
+[SNWApplet]
+Name=SNI Notification area
+Name[ru]=Область уведомление SNI
+Description=Area where StatusNotifierItem's appear
+Description[ru]=Область, где появляются StatusNotifierItem'ы
+Icon=applications-system

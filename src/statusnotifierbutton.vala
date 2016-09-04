@@ -22,7 +22,13 @@ namespace StatusNotifier {
     }
 
     private class Button : Gtk.Button {
+        private Widget widget;
+
+#if MATE
+        private MatePanel.Applet applet;
+#else
         private Plugin plugin;
+#endif
 
         private ItemProxy proxy;
 
@@ -35,13 +41,20 @@ namespace StatusNotifier {
         private string tooltip_icon_name;
         private Gdk.Pixbuf tooltip_icon_pixbuf;
 
-        public Button(string bus_name, string object_path, Plugin plugin) throws Error {
+#if MATE
+        public Button(string bus_name, string object_path, Widget widget, MatePanel.Applet applet) throws Error {
+#else
+        public Button(string bus_name, string object_path, Widget widget, Plugin plugin) throws Error {
+#endif
+            this.widget = widget;
+#if MATE
+            this.applet = applet;
+#else
             this.plugin = plugin;
+#endif
+            relief = Gtk.ReliefStyle.NONE;
 
-            set_relief(Gtk.ReliefStyle.NONE);
-            set_size_request(plugin.size, plugin.size);
-
-            proxy = new ItemProxy(plugin.dbus_connection, bus_name, object_path);
+            proxy = new ItemProxy(widget.dbus_connection, bus_name, object_path);
 
             try {
                 string menu_path = proxy.get_menu();
@@ -64,7 +77,7 @@ namespace StatusNotifier {
                     custom_icon_theme = true;
                 }
             } catch { }
- 
+
             button_press_event.connect(button_pressed);
             button_release_event.connect(button_released);
             scroll_event.connect(wheel_rotated);
@@ -77,7 +90,6 @@ namespace StatusNotifier {
             proxy.new_tooltip.connect(update_tooltip);
             proxy.new_status.connect(update_status);
 
-            update_icon();
             update_tooltip();
             update_status(proxy.get_status());
         }
@@ -86,8 +98,123 @@ namespace StatusNotifier {
             proxy.unsubscribe_signals();
         }
 
-        public void change_size(int size) {
-            update_icon();
+        public void update_icon() {
+            int icon_size = widget.size - 2;
+            if (widget.orientation == Gtk.Orientation.HORIZONTAL) {
+                icon_size -= style.ythickness * 2;
+            } else {
+                icon_size -= style.xthickness * 2;
+            }
+
+            int overlay_icon_size = icon_size / 2;
+
+            Gdk.Pixbuf icon_pixbuf = null;
+            icon_theme.rescan_if_needed();
+
+            try {
+                if (proxy.get_status() == "NeedsAttention") {
+                    string attention_icon_name = proxy.get_attention_icon_name();
+                    if (attention_icon_name.length == 0) {
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_attention_icon_pixmaps());
+                    } else {
+                        icon_pixbuf = load_icon_from_theme(attention_icon_name,
+                                                           icon_size);
+                    }
+                } else {
+                    string icon_name = proxy.get_icon_name();
+
+                    Gdk.Pixbuf overlay_icon_pixbuf = null;
+                    try {
+                        string overlay_icon_name = proxy.get_overlay_icon_name();
+                        if (overlay_icon_name.length == 0) {
+                            overlay_icon_pixbuf = pixbuf_from_pixmaps(proxy.get_overlay_icon_pixmaps());
+                        } else {
+                            overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
+                                                                       overlay_icon_size);
+                        }
+                    } catch { }
+
+                    if (icon_name.length == 0) {
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_icon_pixmaps());
+                    } else {
+                        icon_pixbuf = load_icon_from_theme(icon_name,
+                                                           icon_size);
+                    }
+
+                    if (overlay_icon_pixbuf != null) {
+                        if (widget.orientation == Gtk.Orientation.HORIZONTAL) {
+                            if (overlay_icon_pixbuf.height > overlay_icon_size) {
+                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
+                                    (int) (overlay_icon_pixbuf.width * ((float) overlay_icon_size / overlay_icon_pixbuf.height)),
+                                    overlay_icon_size,
+                                    Gdk.InterpType.BILINEAR
+                                );
+                            }
+                        } else {
+                            if (overlay_icon_pixbuf.width > overlay_icon_size) {
+                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
+                                    overlay_icon_size,
+                                    (int) (overlay_icon_pixbuf.height * ((float) overlay_icon_size / overlay_icon_pixbuf.width)),
+                                    Gdk.InterpType.BILINEAR
+                                );
+                            }
+                        }
+
+                        int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
+                        int y = icon_pixbuf.height - overlay_icon_pixbuf.height;
+
+                        overlay_icon_pixbuf.composite(icon_pixbuf,
+                                                      x,
+                                                      y,
+                                                      overlay_icon_pixbuf.width,
+                                                      overlay_icon_pixbuf.height,
+                                                      x,
+                                                      y,
+                                                      1,
+                                                      1,
+                                                      Gdk.InterpType.BILINEAR,
+                                                      255);
+                    }
+                }
+            } catch (Error error) {
+                stderr.printf("%s\n", error.message);
+                try {
+                    icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
+                } catch (Error error) {
+                    stderr.printf("%s\n", error.message);
+                    return;
+                }
+            }
+
+            if (widget.orientation == Gtk.Orientation.HORIZONTAL) {
+                if (icon_pixbuf.height > icon_size) {
+                    icon_pixbuf = icon_pixbuf.scale_simple(
+                        (int) (icon_pixbuf.width * ((float) icon_size / icon_pixbuf.height)),
+                        icon_size,
+                        Gdk.InterpType.BILINEAR
+                    );
+                }
+                if (icon_pixbuf.width <= icon_pixbuf.height) {
+                    set_size_request(widget.size, widget.size);
+                } else {
+                    set_size_request(icon_pixbuf.width + 2 + style.xthickness * 2, widget.size);
+                }
+            } else {
+                if (icon_pixbuf.width > icon_size) {
+                    icon_pixbuf = icon_pixbuf.scale_simple(
+                        icon_size,
+                        (int) (icon_pixbuf.height * ((float) icon_size / icon_pixbuf.width)),
+                        Gdk.InterpType.BILINEAR
+                    );
+                }
+                if (icon_pixbuf.height <= icon_pixbuf.width) {
+                    set_size_request(widget.size, widget.size);
+                } else {
+                    set_size_request(widget.size, icon_pixbuf.height + 2 + style.ythickness * 2);
+                }
+            }
+
+            icon.set_from_pixbuf(icon_pixbuf);
         }
 
         private bool button_pressed(Gdk.EventButton event) {
@@ -101,7 +228,46 @@ namespace StatusNotifier {
 #else
                                    (menu, out x, out y, out push_in) => {
 #endif
+#if MATE
+                                       Gdk.Window window = get_window();
+                                       int window_x, window_y;
+                                       window.get_origin(out window_x, out window_y);
+                                       int window_width = window.get_width();
+                                       int window_height = window.get_height();
+                                       int button_x, button_y;
+                                       translate_coordinates(get_toplevel(), 0, 0, out button_x, out button_y);
+
+                                       Gtk.Requisition requisition;
+                                       menu.size_request(out requisition);
+
+                                       Gdk.Screen screen = window.get_screen();
+
+                                       uint orient = applet.orient;
+                                       if (orient == MatePanel.AppletOrient.UP ||
+                                           orient == MatePanel.AppletOrient.DOWN) {
+
+                                           x = window_x + button_x;
+
+                                           if (orient == MatePanel.AppletOrient.UP) {
+                                               y = window_y - requisition.height;
+                                           } else {
+                                               y = window_height;
+                                           }
+                                       } else {
+                                           if (orient == MatePanel.AppletOrient.LEFT) {
+                                               x = window_x - requisition.width;
+                                           } else {
+                                               x = window_width;
+                                           }
+
+                                           y = window_y + button_y;
+                                           if ((screen.height() - y) < requisition.height) {
+                                               y = screen.height() - requisition.height;
+                                           }
+                                       }
+#else
                                        Xfce.PanelPlugin.position_menu(menu, out x, out y, out push_in, plugin);
+#endif
                                    },
                                    event.button,
                                    event.time);
@@ -150,127 +316,6 @@ namespace StatusNotifier {
             }
 
             return true;
-        }
-
-        private void update_icon() {
-            int icon_size = plugin.size - 2;
-            if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                icon_size -= style.ythickness * 2;
-            } else {
-                icon_size -= style.xthickness * 2;
-            }
-
-            int overlay_icon_size = icon_size / 2;
-
-            Gdk.Pixbuf icon_pixbuf = null;
-            icon_theme.rescan_if_needed();
-
-            try {
-                if (proxy.get_status() == "NeedsAttention") {
-                    string attention_icon_name = proxy.get_attention_icon_name();
-                    if (attention_icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_attention_icon_pixmaps());
-                    } else {
-                        icon_pixbuf = load_icon_from_theme(attention_icon_name,
-                                                           icon_size);
-                    }
-                } else {
-                    string icon_name = proxy.get_icon_name();
-                    print("%s\n", icon_name);
-
-                    Gdk.Pixbuf overlay_icon_pixbuf = null;
-                    try {
-                        string overlay_icon_name = proxy.get_overlay_icon_name();
-                        if (overlay_icon_name.length == 0) {
-                            overlay_icon_pixbuf = pixbuf_from_pixmaps(proxy.get_overlay_icon_pixmaps());
-                        } else {
-                            overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
-                                                                       overlay_icon_size);
-                        }
-                    } catch { }
-
-                    if (icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_icon_pixmaps());
-                    } else {
-                        icon_pixbuf = load_icon_from_theme(icon_name,
-                                                           icon_size);
-                    }
-
-                    if (overlay_icon_pixbuf != null) {
-                        if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                            if (overlay_icon_pixbuf.height > overlay_icon_size) {
-                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
-                                    (int) (overlay_icon_pixbuf.width * ((float) overlay_icon_size / overlay_icon_pixbuf.height)),
-                                    overlay_icon_size,
-                                    Gdk.InterpType.BILINEAR
-                                );
-                            }
-                        } else {
-                            if (overlay_icon_pixbuf.width > overlay_icon_size) {
-                                overlay_icon_pixbuf = overlay_icon_pixbuf.scale_simple(
-                                    overlay_icon_size,
-                                    (int) (overlay_icon_pixbuf.height * ((float) overlay_icon_size / overlay_icon_pixbuf.width)),
-                                    Gdk.InterpType.BILINEAR
-                                );
-                            }
-                        }
-
-                        int x = icon_pixbuf.width - overlay_icon_pixbuf.width;
-                        int y = icon_pixbuf.height - overlay_icon_pixbuf.height;
-
-                        overlay_icon_pixbuf.composite(icon_pixbuf,
-                                                      x,
-                                                      y,
-                                                      overlay_icon_pixbuf.width,
-                                                      overlay_icon_pixbuf.height,
-                                                      x,
-                                                      y,
-                                                      1,
-                                                      1,
-                                                      Gdk.InterpType.BILINEAR,
-                                                      255);
-                    }
-                }
-            } catch (Error error) {
-                stderr.printf("666 %s\n", error.message);
-                try {
-                    icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
-                    print("123\n");
-                } catch (Error error) {
-                    stderr.printf("%s\n", error.message);
-                    return;
-                }
-            }
-
-            if (plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                if (icon_pixbuf.height > icon_size) {
-                    icon_pixbuf = icon_pixbuf.scale_simple(
-                        (int) (icon_pixbuf.width * ((float) icon_size / icon_pixbuf.height)),
-                        icon_size,
-                        Gdk.InterpType.BILINEAR
-                    );
-                }
-                if (icon_pixbuf.height >= icon_pixbuf.width) {
-                    set_size_request(plugin.size, plugin.size);
-                } else {
-                    set_size_request(icon_pixbuf.width + 2 + 2*style.xthickness, plugin.size);
-                }
-            } else {
-                if (icon_pixbuf.width > icon_size) {
-                    icon_pixbuf = icon_pixbuf.scale_simple(
-                        icon_size,
-                        (int) (icon_pixbuf.height * ((float) icon_size / icon_pixbuf.width)),
-                        Gdk.InterpType.BILINEAR
-                    );
-                }
-                if (icon_pixbuf.width >= icon_pixbuf.height) {
-                    set_size_request(plugin.size, plugin.size);
-                } else {
-                    set_size_request(plugin.size, icon_pixbuf.height + 2 + 2*style.ythickness);
-                }
-            }
-
-            icon.set_from_pixbuf(icon_pixbuf);
         }
 
         private void update_status(string status) {
@@ -350,21 +395,7 @@ namespace StatusNotifier {
                 size = 96;
             }
 
-            Gdk.Pixbuf icon_pixbuf = icon_theme.load_icon(icon_name, size, 0);
-
-            if (icon_pixbuf.width > icon_pixbuf.height &&
-                    plugin.orientation == Gtk.Orientation.HORIZONTAL) {
-                icon_pixbuf = icon_theme.load_icon(icon_name,
-                                                   (int) (size * ((float) icon_pixbuf.width / icon_pixbuf.height)),
-                                                   0);
-            } else if (icon_pixbuf.height > icon_pixbuf.width &&
-                    plugin.orientation == Gtk.Orientation.VERTICAL) {
-                 icon_pixbuf = icon_theme.load_icon(icon_name,
-                                                   (int) (size * ((float) icon_pixbuf.height / icon_pixbuf.width)),
-                                                   0);
-            }
-
-            return icon_pixbuf;
+            return icon_theme.load_icon(icon_name, size, 0);
         }
 
         private Gdk.Pixbuf pixbuf_from_pixmaps(IconPixmap[] icon_pixmaps) throws PixmapError {

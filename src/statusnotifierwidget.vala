@@ -18,16 +18,40 @@
 
 namespace StatusNotifier {
     private class Widget : Gtk.Box {
+        public DBusConnection dbus_connection;
+
+        public int size { get; set; }
+
+#if MATE
+        private MatePanel.Applet applet;
+#else
         private Plugin plugin;
+#endif
         private Watcher watcher;
         private GenericArray<Button> buttons;
         private Gtk.DrawingArea handle;
 
-        public Widget(Plugin plugin) {
+#if MATE
+        public Widget(Gtk.Orientation orientation, int size, MatePanel.Applet applet) {
+#else
+        public Widget(Gtk.Orientation orientation, int size, Plugin plugin) {
+#endif
+            this.orientation = orientation;
+#if MATE
+            this.applet = applet;
+#else
             this.plugin = plugin;
+#endif
 
-            watcher = new Watcher(plugin.dbus_connection);
             buttons = new GenericArray<Button>();
+
+            try {
+                dbus_connection = Bus.get_sync(BusType.SESSION, null);
+            } catch (IOError error) {
+                stderr.printf("%s\n", error.message);
+            }
+
+            watcher = new Watcher(dbus_connection);
 
             Gtk.rc_parse_string("""
                                 style "button-style"
@@ -39,23 +63,63 @@ namespace StatusNotifier {
                                 widget_class "*<StatusNotifierButton>" style "button-style"
                                 """);
 
+#if !MATE
             handle = new Gtk.DrawingArea();
             handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
-            handle.expose_event.connect(draw_handle);
+            handle.expose_event.connect(() => {
+                Gtk.paint_handle(handle.style,
+                                 handle.window,
+                                 handle.get_state(),
+                                 Gtk.ShadowType.NONE,
+                                 null,
+                                 handle,
+                                 null,
+                                 0,
+                                 0,
+                                 handle.allocation.width,
+                                 handle.allocation.height,
+                                 (orientation == Gtk.Orientation.HORIZONTAL) ? Gtk.Orientation.VERTICAL
+                                                                             : Gtk.Orientation.HORIZONTAL);
+                return false;
+            });
             pack_start(handle);
+#endif
 
-            plugin.size_changed.connect(change_size);
-            plugin.orientation_changed.connect(change_orientation);
+            this.size = size;
+            update_size();
 
             watcher.item_added.connect(add_button);
             watcher.item_removed.connect(remove_button);
         }
 
+        public void update_size() {
+            if (orientation == Gtk.Orientation.HORIZONTAL) {
+                set_size_request(-1, _size);
+#if !MATE
+                handle.set_size_request(8, _size);
+#endif
+            } else {
+                set_size_request(_size, -1);
+#if !MATE
+                handle.set_size_request(_size, 8);
+#endif
+            }
+
+            foreach (var button in buttons.data) {
+                button.update_icon();
+            }
+        }
+
         private void add_button(string bus_name, string object_path) {
             try {
-                var button = new Button(bus_name, object_path, plugin);
+#if MATE
+                var button = new Button(bus_name, object_path, this, applet);
+#else
+                var button = new Button(bus_name, object_path, this, plugin);
+#endif
                 buttons.add(button);
                 pack_start(button);
+                button.update_icon();
             } catch {
                 watcher.remove_item(bus_name);
             }
@@ -64,42 +128,6 @@ namespace StatusNotifier {
         private void remove_button(int index) {
             remove(buttons.data[index]);
             buttons.remove_index(index);
-        }
-
-        private bool change_size(int size) {
-            if (orientation == Gtk.Orientation.HORIZONTAL) {
-                handle.set_size_request(8, size);
-            } else {
-                handle.set_size_request(size, 8);
-            }
-
-            foreach (var button in buttons.data) {
-                button.change_size(size);
-            }
-
-            return true;
-        }
-
-        private void change_orientation(Gtk.Orientation new_orientation) {
-            orientation = new_orientation;
-            change_size(plugin.size);
-        }
-
-        private bool draw_handle(Gdk.EventExpose event) {
-            Gtk.paint_handle(handle.style,
-                             handle.window,
-                             handle.get_state(),
-                             Gtk.ShadowType.NONE,
-                             handle.allocation,
-                             handle,
-                             null,
-                             0,
-                             0,
-                             handle.allocation.width,
-                             handle.allocation.height,
-                             (orientation == Gtk.Orientation.HORIZONTAL) ? Gtk.Orientation.VERTICAL
-                                                                         : Gtk.Orientation.HORIZONTAL);
-            return false;
         }
     }
 }

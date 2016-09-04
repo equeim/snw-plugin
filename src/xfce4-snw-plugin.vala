@@ -19,18 +19,22 @@
 
 namespace StatusNotifier {
     private class Plugin : Xfce.PanelPlugin {
-        public DBusConnection dbus_connection;
-
         public override void @construct() {
-            try {
-                dbus_connection = Bus.get_sync(BusType.SESSION, null);
-            } catch (IOError error) {
-                stderr.printf("%s\n", error.message);
-            }
-
-            var widget = new Widget(this);
+            var widget = new Widget(orientation, size, this);
             add(widget);
             add_action_widget(widget);
+
+            orientation_changed.connect((orientation) => {
+                widget.orientation = orientation;
+                widget.update_size();
+            });
+
+            size_changed.connect(() => {
+                widget.size = size;
+                widget.update_size();
+                return true;
+            });
+
             widget.show_all();
         }
     }
