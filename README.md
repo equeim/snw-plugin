@@ -7,6 +7,7 @@ Dependencies:
 * GTK+ 2
 * libdbusmenu-gtk2
 * xfce4-panel or mate-panel
+
 ### Building
 For xfce4-panel:
 ```
