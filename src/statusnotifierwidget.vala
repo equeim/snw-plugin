@@ -55,12 +55,16 @@ namespace StatusNotifier {
 
 #if GTK3
             var provider = new Gtk.CssProvider();
-            provider.load_from_data("""
-                                    .statusnotifierbutton {
-                                        padding: 2px;
-                                    }
-                                    """);
-            Gtk.StyleContext.add_provider_for_screen(get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+            try {
+                provider.load_from_data("""
+                                        .statusnotifierbutton {
+                                            padding: 2px;
+                                        }
+                                        """);
+                Gtk.StyleContext.add_provider_for_screen(get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+            } catch (Error error) {
+                print_error(error.message);
+            }
 #else
             Gtk.rc_parse_string("""
                                 style "button-style"
