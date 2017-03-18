@@ -69,10 +69,10 @@ namespace StatusNotifier {
                                            try {
                                                dbus_connection.register_object("/StatusNotifierWatcher", this);
                                            } catch (IOError e) {
-                                               stderr.printf("Could not register service\n");
+                                               print_error("Could not register service");
                                            }
                                        },
-                                       () => stderr.printf("Could not acquire name\n"));
+                                       () => print_error("Could not register service"));
         }
 
         public void register_status_notifier_item(string bus_name, BusName sender) {

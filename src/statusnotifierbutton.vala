@@ -192,11 +192,11 @@ namespace StatusNotifier {
                     }
                 }
             } catch (Error error) {
-                stderr.printf("%s\n", error.message);
+                print_error(error.message);
                 try {
                     icon_pixbuf = load_icon_from_theme("image-missing", icon_size);
                 } catch (Error error) {
-                    stderr.printf("%s\n", error.message);
+                    print_error(error.message);
                     return;
                 }
             }
@@ -351,7 +351,7 @@ namespace StatusNotifier {
                 tooltip = proxy.get_tooltip();
             } catch (Error error) {
                 set_generic_tooltip();
-                stderr.printf("%s\n", error.message);
+                print_error(error.message);
                 return;
             }
 

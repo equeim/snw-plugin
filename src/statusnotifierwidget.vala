@@ -48,7 +48,7 @@ namespace StatusNotifier {
             try {
                 dbus_connection = Bus.get_sync(BusType.SESSION, null);
             } catch (IOError error) {
-                stderr.printf("%s\n", error.message);
+                print_error(error.message);
             }
 
             watcher = new Watcher(dbus_connection);

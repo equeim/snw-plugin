@@ -34,7 +34,8 @@ def build(context):
         "src/statusnotifierbutton.vala",
         "src/statusnotifieritem.vala",
         "src/statusnotifierwatcher.vala",
-        "src/statusnotifierwidget.vala"
+        "src/statusnotifierwidget.vala",
+        "src/utils.vala"
     ]
 
     if context.env.GTK3:
