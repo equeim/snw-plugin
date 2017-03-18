@@ -72,7 +72,7 @@ namespace StatusNotifier {
     }
 
     private class ItemProxy : Object {
-        private static const string INTERFACE_NAME = "org.kde.StatusNotifierItem";
+        private const string INTERFACE_NAME = "org.kde.StatusNotifierItem";
 
         private DBusConnection dbus_connection;
         private string bus_name;
