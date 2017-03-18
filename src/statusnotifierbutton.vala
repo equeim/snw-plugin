@@ -54,6 +54,10 @@ namespace StatusNotifier {
 #endif
             relief = Gtk.ReliefStyle.NONE;
 
+#if GTK3
+            get_style_context().add_class("statusnotifierbutton");
+#endif
+
             proxy = new ItemProxy(widget.dbus_connection, bus_name, object_path);
 
             try {
@@ -99,12 +103,23 @@ namespace StatusNotifier {
         }
 
         public void update_icon() {
-            int icon_size = widget.size - 2;
+            int icon_size = widget.size;
+            int icon_padding = 2;
+#if GTK3
+            Gtk.Border padding = get_style_context().get_padding(Gtk.StateFlags.NORMAL);
             if (widget.orientation == Gtk.Orientation.HORIZONTAL) {
-                icon_size -= style.ythickness * 2;
+                icon_padding += padding.top + padding.bottom;
             } else {
-                icon_size -= style.xthickness * 2;
+                icon_padding += padding.left + padding.right;
             }
+#else
+            if (widget.orientation == Gtk.Orientation.HORIZONTAL) {
+                icon_padding += style.ythickness * 2;
+            } else {
+                icon_padding += style.xthickness * 2;
+            }
+#endif
+            icon_size -= icon_padding;
 
             int overlay_icon_size = icon_size / 2;
 
@@ -197,7 +212,7 @@ namespace StatusNotifier {
                 if (icon_pixbuf.width <= icon_pixbuf.height) {
                     set_size_request(widget.size, widget.size);
                 } else {
-                    set_size_request(icon_pixbuf.width + 2 + style.xthickness * 2, widget.size);
+                    set_size_request(icon_pixbuf.width + icon_padding, widget.size);
                 }
             } else {
                 if (icon_pixbuf.width > icon_size) {
@@ -210,7 +225,7 @@ namespace StatusNotifier {
                 if (icon_pixbuf.height <= icon_pixbuf.width) {
                     set_size_request(widget.size, widget.size);
                 } else {
-                    set_size_request(widget.size, icon_pixbuf.height + 2 + style.ythickness * 2);
+                    set_size_request(widget.size, icon_pixbuf.height + icon_padding);
                 }
             }
 
@@ -238,7 +253,11 @@ namespace StatusNotifier {
                                        translate_coordinates(get_toplevel(), 0, 0, out button_x, out button_y);
 
                                        Gtk.Requisition requisition;
+#if GTK3
+                                       menu.get_preferred_size(null, out requisition);
+#else
                                        menu.size_request(out requisition);
+#endif
 
                                        Gdk.Screen screen = window.get_screen();
 

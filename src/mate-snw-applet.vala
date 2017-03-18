@@ -31,7 +31,8 @@ namespace StatusNotifier {
             return false;
         }
 
-        applet.flags = MatePanel.AppletFlags.HAS_HANDLE;
+        //applet.flags = MatePanel.AppletFlags.HAS_HANDLE;
+        applet.flags = MatePanel.AppletFlags.HAS_HANDLE | MatePanel.AppletFlags.EXPAND_MINOR;
 
         var widget = new Widget(get_orientation(applet.orient), (int) applet.size, applet);
 
@@ -46,6 +47,7 @@ namespace StatusNotifier {
         });
 
         applet.add(widget);
+        
         applet.show_all();
 
         return true;

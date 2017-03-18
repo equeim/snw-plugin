@@ -7,4 +7,4 @@ Comment[ru]=Область для отображения StatusNotifierItem'ов
 Icon=applications-system
 X-XFCE-Module=snw
 X-XFCE-Unique=true
-X-XFCE-API=1.0
+X-XFCE-API=@API@

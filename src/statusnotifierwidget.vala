@@ -53,6 +53,15 @@ namespace StatusNotifier {
 
             watcher = new Watcher(dbus_connection);
 
+#if GTK3
+            var provider = new Gtk.CssProvider();
+            provider.load_from_data("""
+                                    .statusnotifierbutton {
+                                        padding: 2px;
+                                    }
+                                    """);
+            Gtk.StyleContext.add_provider_for_screen(get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+#else
             Gtk.rc_parse_string("""
                                 style "button-style"
                                 {
@@ -62,10 +71,12 @@ namespace StatusNotifier {
                                 }
                                 widget_class "*<StatusNotifierButton>" style "button-style"
                                 """);
+#endif
 
 #if !MATE
             handle = new Gtk.DrawingArea();
             handle.add_events(Gdk.EventMask.BUTTON_PRESS_MASK);
+#if !GTK3
             handle.expose_event.connect(() => {
                 Gtk.paint_handle(handle.style,
                                  handle.window,
@@ -82,8 +93,9 @@ namespace StatusNotifier {
                                                                              : Gtk.Orientation.HORIZONTAL);
                 return false;
             });
+#endif // !GTK3
             pack_start(handle);
-#endif
+#endif // !MATE
 
             this.size = size;
             update_size();
@@ -93,17 +105,13 @@ namespace StatusNotifier {
         }
 
         public void update_size() {
+#if !MATE
             if (orientation == Gtk.Orientation.HORIZONTAL) {
-                set_size_request(-1, _size);
-#if !MATE
-                handle.set_size_request(8, _size);
-#endif
+                handle.set_size_request(8, size);
             } else {
-                set_size_request(_size, -1);
-#if !MATE
-                handle.set_size_request(_size, 8);
-#endif
+                handle.set_size_request(size, 8);
             }
+#endif
 
             foreach (var button in buttons.data) {
                 button.update_icon();
