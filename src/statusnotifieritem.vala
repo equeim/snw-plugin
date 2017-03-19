@@ -17,6 +17,8 @@
  */
 
 namespace StatusNotifier {
+    private delegate void GotPropertyCallback(Variant property);
+
     private struct IconPixmap {
         int width;
         int height;
@@ -74,88 +76,72 @@ namespace StatusNotifier {
     private class ItemProxy : Object {
         private const string INTERFACE_NAME = "org.kde.StatusNotifierItem";
 
+        private const string DBUS_ID = "Id";
+        private const string DBUS_TITLE = "Title";
+        private const string DBUS_ICON_NAME = "IconName";
+        private const string DBUS_ICON_PIXMAP = "IconPixmap";
+        private const string DBUS_OVERLAY_ICON_NAME = "OverlayIconName";
+        private const string DBUS_OVERLAY_ICON_PIXMAP = "OverlayIconPixmap";
+        private const string DBUS_ATTENTION_ICON_NAME = "AttentionIconName";
+        private const string DBUS_ATTENTION_ICON_PIXMAP = "AttentionIconPixmap";
+        private const string DBUS_ICON_THEME_PATH = "IconThemePath";
+        private const string DBUS_TOOLTIP = "ToolTip";
+        private const string DBUS_STATUS = "Status";
+        private const string DBUS_MENU = "Menu";
+
         private DBusConnection dbus_connection;
         private string bus_name;
         private string object_path;
         private uint[] signal_ids;
 
         public string id { get; private set; }
+        public string title { get; private set; }
+
+        public string icon_name { get; private set; }
+        private bool icon_name_updated = false;
+        public IconPixmap[] icon_pixmaps { get; private set; }
+        private bool icon_pixmaps_updated = false;
+
+        public string overlay_icon_name { get; private set; }
+        private bool overlay_icon_name_updated = false;
+        public IconPixmap[] overlay_icon_pixmaps { get; private set; }
+        private bool overlay_icon_pixmaps_updated = false;
+
+        public string attention_icon_name { get; private set; }
+        private bool attention_icon_name_updated = false;
+        public IconPixmap[] attention_icon_pixmaps { get; private set; }
+        private bool attention_icon_pixmaps_updated = false;
+
+        public string icon_theme_path { get; private set; }
+
+        public ToolTip tooltip { get; private set; }
+        public string status { get; private set; }
+        public string menu { get; private set; }
+
+        public signal void got_all_properties();
 
         public signal void new_title();
         public signal void new_icon();
         public signal void new_overlay_icon();
         public signal void new_attention_icon();
         public signal void new_tooltip();
-        public signal void new_status(string status);
+        public signal void new_status();
 
         public ItemProxy(DBusConnection connection, string bus_name, string object_path) throws Error {
             dbus_connection = connection;
             this.bus_name = bus_name;
             this.object_path = object_path;
 
-            id = get_dbus_property("Id").get_string();
+            get_all_properties();
 
-            subscribe_dbus_signal("NewTitle", () => new_title());
-            subscribe_dbus_signal("NewIcon", () => new_icon());
-            subscribe_dbus_signal("NewOverlayIcon", () => new_overlay_icon());
-            subscribe_dbus_signal("NewAttentionIcon", () => new_attention_icon());
-            subscribe_dbus_signal("NewToolTip", () => new_tooltip());
+            subscribe_dbus_signal("NewTitle", dbus_get_title);
+            subscribe_dbus_signal("NewIcon", dbus_get_icon);
+            subscribe_dbus_signal("NewOverlayIcon", dbus_get_overlay_icon);
+            subscribe_dbus_signal("NewAttentionIcon", dbus_get_attention_icon);
+            subscribe_dbus_signal("NewToolTip", dbus_get_tooltip);
             subscribe_dbus_signal("NewStatus", new_status_callback);
         }
 
-        //
-        // DBus properties
-        //
-        public string get_title() throws Error {
-            return get_dbus_property("Title").get_string();
-        }
-
-        public string get_status() throws Error {
-            return get_dbus_property("Status").get_string();
-        }
-
-        public string get_icon_name() throws Error {
-            return get_dbus_property("IconName").get_string();
-        }
-
-        public IconPixmap[] get_icon_pixmaps() throws Error {
-            return unbox_pixmaps(get_dbus_property("IconPixmap"));
-        }
-
-        public string get_overlay_icon_name() throws Error {
-            return get_dbus_property("OverlayIconName").get_string();
-        }
-
-        public IconPixmap[] get_overlay_icon_pixmaps() throws Error {
-            return unbox_pixmaps(get_dbus_property("OverlayIconPixmap"));
-        }
-
-        public string get_attention_icon_name() throws Error {
-            return get_dbus_property("AttentionIconName").get_string();
-        }
-
-        public IconPixmap[] get_attention_icon_pixmaps() throws Error {
-            return unbox_pixmaps(get_dbus_property("AttentionIconPixmap"));
-        }
-
-        public ToolTip get_tooltip() throws Error {
-            return unbox_tooltip(get_dbus_property("ToolTip"));
-        }
-
-        //
-        // Not in specification
-        //
-        public string get_icon_theme_path() throws Error {
-            return get_dbus_property("IconThemePath").get_string();
-        }
-
-        public string get_menu() throws Error {
-            return get_dbus_property("Menu").get_string();
-        }
-
-        //
-        // DBus methods
-        //
         public void activate(int x, int y) {
             call_dbus_method("Activate", new Variant("(ii)", x, y));
         }
@@ -168,31 +154,119 @@ namespace StatusNotifier {
             call_dbus_method("Scroll", new Variant("(is)", delta, orientation));
         }
 
-        //
-        // Methods
-        //
-        public static void check_existence(DBusConnection connection, string bus_name, string object_path) throws Error {
-            connection.call_sync(
-                bus_name,
-                object_path,
-                "org.freedesktop.DBus.Properties",
-                "Get",
-                new Variant("(ss)", INTERFACE_NAME, "Id"),
-                null,
-                DBusCallFlags.NONE,
-                -1,
-                null
-            );
-        }
-
         public void unsubscribe_signals() {
             foreach (var id in signal_ids) {
                 dbus_connection.signal_unsubscribe(id);
             }
         }
 
-        private Variant get_dbus_property(string property_name) throws Error {
-            return dbus_connection.call_sync(
+        private void dbus_get_title() {
+            get_dbus_property(DBUS_TITLE, (property) => {
+                title = property.get_string();
+                new_title();
+            });
+        }
+
+        private void dbus_get_icon() {
+            icon_name_updated = false;
+            icon_pixmaps_updated = false;
+            dbus_get_icon_name();
+            dbus_get_icon_pixmaps();
+        }
+
+        private void dbus_get_icon_name() {
+            get_dbus_property(DBUS_ICON_NAME, (property) => {
+                icon_name = property.get_string();
+                icon_name_updated = true;
+                if (icon_pixmaps_updated) {
+                    new_icon();
+                }
+            });
+        }
+
+        private void dbus_get_icon_pixmaps()  {
+            get_dbus_property(DBUS_ICON_PIXMAP, (property) => {
+                icon_pixmaps = unbox_pixmaps(property);
+                icon_pixmaps_updated = true;
+                if (icon_name_updated) {
+                    new_icon();
+                }
+            });
+        }
+
+        private void dbus_get_overlay_icon() {
+            overlay_icon_name_updated = false;
+            overlay_icon_pixmaps_updated = false;
+            dbus_get_overlay_icon_name();
+            dbus_get_overlay_icon_pixmaps();
+        }
+
+        private void dbus_get_overlay_icon_name()  {
+            get_dbus_property(DBUS_OVERLAY_ICON_NAME, (property) => {
+                overlay_icon_name = property.get_string();
+                overlay_icon_name_updated = true;
+                if (overlay_icon_pixmaps_updated) {
+                    new_overlay_icon();
+                }
+            });
+        }
+
+        private void dbus_get_overlay_icon_pixmaps()  {
+            get_dbus_property(DBUS_OVERLAY_ICON_PIXMAP, (property) => {
+                overlay_icon_pixmaps = unbox_pixmaps(property);
+                overlay_icon_pixmaps_updated = true;
+                if (overlay_icon_name_updated) {
+                    new_overlay_icon();
+                }
+            });
+        }
+
+        private void dbus_get_attention_icon() {
+            attention_icon_name_updated = false;
+            attention_icon_pixmaps_updated = false;
+            dbus_get_attention_icon_name();
+            dbus_get_attention_icon_pixmaps();
+        }
+
+        private void dbus_get_attention_icon_name()  {
+            get_dbus_property(DBUS_ATTENTION_ICON_NAME, (property) => {
+                attention_icon_name = property.get_string();
+                attention_icon_name_updated = true;
+                if (attention_icon_pixmaps_updated) {
+                    new_attention_icon();
+                }
+            });
+        }
+
+        private void dbus_get_attention_icon_pixmaps()  {
+            get_dbus_property(DBUS_ATTENTION_ICON_PIXMAP, (property) => {
+                attention_icon_pixmaps = unbox_pixmaps(property);
+                attention_icon_pixmaps_updated = true;
+                if (attention_icon_name_updated) {
+                    new_attention_icon();
+                }
+            });
+        }
+
+        private void dbus_get_tooltip()  {
+            get_dbus_property(DBUS_TOOLTIP, (property) => {
+                tooltip = unbox_tooltip(property);
+                new_tooltip();
+            });
+        }
+
+        private void new_status_callback(DBusConnection connection,
+                                         string bus_name,
+                                         string object_path,
+                                         string interface_name,
+                                         string signal_name,
+                                         Variant parameters) {
+            status = parameters.get_child_value(0).get_string();
+            new_status();
+        }
+
+        private void get_dbus_property(string property_name, GotPropertyCallback callback) {
+            dbus_connection.call.begin(
                 bus_name,
                 object_path,
                 "org.freedesktop.DBus.Properties",
@@ -201,28 +275,79 @@ namespace StatusNotifier {
                 null,
                 DBusCallFlags.NONE,
                 -1,
-                null
-            ).get_child_value(0).get_variant();
-        }
-
-        private void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
-            signal_ids += dbus_connection.signal_subscribe(
-                bus_name,
-                INTERFACE_NAME,
-                signal_name,
-                object_path,
                 null,
-                DBusSignalFlags.NONE,
-                (owned) callback
+                (object, result) => {
+                    try {
+                        callback(dbus_connection.call.end(result).get_child_value(0).get_variant());
+                    } catch (Error error) {
+                        print_error(error.message);
+                    }
+                }
             );
         }
-        private void new_status_callback(DBusConnection connection,
-                                 string bus_name,
-                                 string object_path,
-                                 string interface_name,
-                                 string signal_name,
-                                 Variant parameters) {
-            new_status(parameters.get_child_value(0).get_string());
+
+        private void get_all_properties() {
+            dbus_connection.call.begin(
+                bus_name,
+                object_path,
+                "org.freedesktop.DBus.Properties",
+                "GetAll",
+                new Variant("(s)", INTERFACE_NAME),
+                null,
+                DBusCallFlags.NONE,
+                -1,
+                null,
+                (object, result) => {
+                    try {
+                        var properties = dbus_connection.call.end(result).get_child_value(0);
+                        foreach (Variant property in properties) {
+                            string key = property.get_child_value(0).get_string();
+                            Variant value = property.get_child_value(1).get_variant();
+                            switch (key) {
+                                case DBUS_ID:
+                                    id = value.get_string();
+                                    break;
+                                case DBUS_TITLE:
+                                    title = value.get_string();
+                                    break;
+                                case DBUS_ICON_NAME:
+                                    icon_name = value.get_string();
+                                    break;
+                                case DBUS_ICON_PIXMAP:
+                                    icon_pixmaps = unbox_pixmaps(value);
+                                    break;
+                                case DBUS_OVERLAY_ICON_NAME:
+                                    overlay_icon_name = value.get_string();
+                                    break;
+                                case DBUS_OVERLAY_ICON_PIXMAP:
+                                    overlay_icon_pixmaps = unbox_pixmaps(value);
+                                    break;
+                                case DBUS_ATTENTION_ICON_NAME:
+                                    attention_icon_name = value.get_string();
+                                    break;
+                                case DBUS_ATTENTION_ICON_PIXMAP:
+                                    attention_icon_pixmaps = unbox_pixmaps(value);
+                                    break;
+                                case DBUS_ICON_THEME_PATH:
+                                    icon_theme_path = value.get_string();
+                                    break;
+                                case DBUS_STATUS:
+                                    status = value.get_string();
+                                    break;
+                                case DBUS_TOOLTIP:
+                                    tooltip = unbox_tooltip(value);
+                                    break;
+                                case DBUS_MENU:
+                                    menu = value.get_string();
+                                    break;
+                            }
+                        }
+                        got_all_properties();
+                    } catch (Error error) {
+                        print_error(error.message);
+                    }
+                }
+            );
         }
 
         private void call_dbus_method(string method_name, Variant parameters) {
@@ -236,6 +361,18 @@ namespace StatusNotifier {
                 DBusCallFlags.NONE,
                 -1,
                 null
+            );
+        }
+
+        private void subscribe_dbus_signal(string signal_name, owned DBusSignalCallback callback) {
+            signal_ids += dbus_connection.signal_subscribe(
+                bus_name,
+                INTERFACE_NAME,
+                signal_name,
+                object_path,
+                null,
+                DBusSignalFlags.NONE,
+                (owned) callback
             );
         }
     }

@@ -84,9 +84,8 @@ namespace StatusNotifier {
                 object_path = "/StatusNotifierItem";
             }
 
-            try {
-                ItemProxy.check_existence(dbus_connection, bus_name, object_path);
-            } catch {
+            if (!DBus.is_name(bus_name)) {
+                print_error("%s is not a DBus service name".printf(bus_name));
                 return;
             }
 

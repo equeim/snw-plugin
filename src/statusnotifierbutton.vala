@@ -34,12 +34,14 @@ namespace StatusNotifier {
 
         private DbusmenuGtk.Menu menu;
 
-        private Gtk.Image icon;
-        private Gtk.IconTheme icon_theme;
-        private bool custom_icon_theme;
+        private Gtk.Image icon = new Gtk.Image();
+        private Gtk.IconTheme icon_theme = Gtk.IconTheme.get_default();
+        private bool custom_icon_theme = false;
 
         private string tooltip_icon_name;
         private Gdk.Pixbuf tooltip_icon_pixbuf;
+
+        private string bus_name;
 
 #if MATE
         public Button(string bus_name, string object_path, Widget widget, MatePanel.Applet applet) throws Error {
@@ -58,29 +60,13 @@ namespace StatusNotifier {
             get_style_context().add_class("statusnotifierbutton");
 #endif
 
-            proxy = new ItemProxy(widget.dbus_connection, bus_name, object_path);
-
-            try {
-                string menu_path = proxy.get_menu();
-                if (menu_path.length != 0) {
-                    menu = new DbusmenuGtk.Menu(bus_name, menu_path);
-                    menu.attach_to_widget(this, null);
-                }
-            } catch { }
-
-            icon = new Gtk.Image();
             add(icon);
             icon.show();
 
-            icon_theme = Gtk.IconTheme.get_default();
-            custom_icon_theme = false;
-            try {
-                string icon_theme_path = proxy.get_icon_theme_path();
-                if (icon_theme_path.length != 0) {
-                    icon_theme.prepend_search_path(icon_theme_path);
-                    custom_icon_theme = true;
-                }
-            } catch { }
+            this.bus_name = bus_name;
+
+            proxy = new ItemProxy(widget.dbus_connection, bus_name, object_path);
+            proxy.got_all_properties.connect(proxy_got_all_properties);
 
             button_press_event.connect(button_pressed);
             button_release_event.connect(button_released);
@@ -93,13 +79,32 @@ namespace StatusNotifier {
             proxy.new_overlay_icon.connect(update_icon);
             proxy.new_tooltip.connect(update_tooltip);
             proxy.new_status.connect(update_status);
-
-            update_tooltip();
-            update_status(proxy.get_status());
         }
 
         ~Button() {
             proxy.unsubscribe_signals();
+        }
+
+        private void proxy_got_all_properties() {
+            string menu_path = proxy.menu;
+            if (menu_path != null) {
+                if (menu_path.length != 0) {
+                    menu = new DbusmenuGtk.Menu(bus_name, menu_path);
+                    menu.attach_to_widget(this, null);
+                }
+            }
+
+            string icon_theme_path = proxy.icon_theme_path;
+            if (icon_theme_path != null) {
+                if (icon_theme_path.length != 0) {
+                    icon_theme.prepend_search_path(icon_theme_path);
+                    custom_icon_theme = true;
+                }
+            }
+
+            update_icon();
+            update_tooltip();
+            update_status();
         }
 
         public void update_icon() {
@@ -127,22 +132,22 @@ namespace StatusNotifier {
             icon_theme.rescan_if_needed();
 
             try {
-                if (proxy.get_status() == "NeedsAttention") {
-                    string attention_icon_name = proxy.get_attention_icon_name();
+                if (proxy.status == "NeedsAttention") {
+                    string attention_icon_name = proxy.attention_icon_name;
                     if (attention_icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_attention_icon_pixmaps());
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.attention_icon_pixmaps);
                     } else {
                         icon_pixbuf = load_icon_from_theme(attention_icon_name,
                                                            icon_size);
                     }
                 } else {
-                    string icon_name = proxy.get_icon_name();
+                    string icon_name = proxy.icon_name;
 
                     Gdk.Pixbuf overlay_icon_pixbuf = null;
                     try {
-                        string overlay_icon_name = proxy.get_overlay_icon_name();
+                        string overlay_icon_name = proxy.overlay_icon_name;
                         if (overlay_icon_name.length == 0) {
-                            overlay_icon_pixbuf = pixbuf_from_pixmaps(proxy.get_overlay_icon_pixmaps());
+                            overlay_icon_pixbuf = pixbuf_from_pixmaps(proxy.overlay_icon_pixmaps);
                         } else {
                             overlay_icon_pixbuf = load_icon_from_theme(overlay_icon_name,
                                                                        overlay_icon_size);
@@ -150,7 +155,7 @@ namespace StatusNotifier {
                     } catch { }
 
                     if (icon_name.length == 0) {
-                        icon_pixbuf = pixbuf_from_pixmaps(proxy.get_icon_pixmaps());
+                        icon_pixbuf = pixbuf_from_pixmaps(proxy.icon_pixmaps);
                     } else {
                         icon_pixbuf = load_icon_from_theme(icon_name,
                                                            icon_size);
@@ -337,8 +342,8 @@ namespace StatusNotifier {
             return true;
         }
 
-        private void update_status(string status) {
-            if (status == "Passive") {
+        private void update_status() {
+            if (proxy.status == "Passive") {
                 hide();
             } else {
                 show();
@@ -346,14 +351,7 @@ namespace StatusNotifier {
         }
 
         private void update_tooltip() {
-            ToolTip tooltip;
-            try {
-                tooltip = proxy.get_tooltip();
-            } catch (Error error) {
-                set_generic_tooltip();
-                print_error(error.message);
-                return;
-            }
+            ToolTip tooltip = proxy.tooltip;
 
             if (tooltip.title.length == 0) {
                 set_generic_tooltip();
@@ -387,14 +385,15 @@ namespace StatusNotifier {
         private void set_generic_tooltip() {
             tooltip_icon_name = null;
             tooltip_icon_pixbuf = null;
-            try {
-                string title = proxy.get_title();
-                if (title.length == 0) {
-                    tooltip_markup = proxy.id;
-                } else {
+
+            string title = proxy.title;
+            if (title != null) {
+                if (title.length != 0) {
                     tooltip_markup = title;
+                } else {
+                    tooltip_markup = proxy.id;
                 }
-            } catch {
+            } else {
                 tooltip_markup = proxy.id;
             }
         }

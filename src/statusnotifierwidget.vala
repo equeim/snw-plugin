@@ -131,8 +131,8 @@ namespace StatusNotifier {
 #endif
                 buttons.add(button);
                 pack_start(button);
-                button.update_icon();
-            } catch {
+            } catch (Error error) {
+                print_error(error.message);
                 watcher.remove_item(bus_name);
             }
         }
