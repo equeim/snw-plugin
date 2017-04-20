@@ -1,3 +1,5 @@
+# Project is temporarily suspended. I won't be able to support my projects until 2018 spring
+
 # snw-plugin
 Plugin for xfce4-panel and mate-panel to show StatusNotifierItems (also known as AppIndicators)
 
